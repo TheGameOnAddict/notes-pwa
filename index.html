@@ -16,7 +16,7 @@
   --panel:rgba(35,37,44,.82);
   --button:rgba(255,255,255,.12);
   --stroke:rgba(255,255,255,.16);
-  --highlight:rgba(255,214,10,.36);
+  --highlight:rgba(255,214,10,.34);
   --highlight-strong:rgba(255,214,10,.52);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -45,27 +45,45 @@ body::before{
   display:grid;place-items:center;box-shadow:inset 0 1px rgba(255,255,255,.14),0 4px 10px rgba(0,0,0,.18);
 }
 .iconBtn:disabled{opacity:.35}
-#title{text-align:center;min-width:0;width:100%}
-#titleMain{font-size:15px;line-height:18px;font-weight:760;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#title{text-align:center;min-width:0;width:100%;cursor:pointer}
+#titleMain{font-size:15px;line-height:18px;font-weight:760;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:font-size .15s}
 #titleSub{
-  margin:2px auto 0;width:max-content;max-width:160px;border-radius:999px;padding:2px 8px 3px;
+  margin:2px auto 0;width:max-content;max-width:180px;border-radius:999px;padding:2px 8px 3px;
   background:rgba(255,255,255,.09);color:var(--muted);font-size:11px;line-height:12px;font-weight:780;
 }
+#pageJump{
+  display:none;margin:2px auto 0;width:96px;border:0;outline:0;border-radius:999px;padding:3px 8px 4px;
+  background:rgba(255,255,255,.16);color:var(--text);text-align:center;font-size:15px;font-weight:850;
+}
+body.jumping #titleMain{font-size:11px;color:var(--muted)}
+body.jumping #titleSub{display:none}
+body.jumping #pageJump{display:block}
 #file{position:absolute;left:-9999px}
+
 #viewer{
-  flex:1 1 auto;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;
-  padding:3px 16px 10px;-webkit-overflow-scrolling:touch;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:3px 16px 10px;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
 }
 #stage{position:relative}
 canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px rgba(0,0,0,.24)}
-#draw{position:absolute;left:0;top:0;background:transparent;touch-action:none;z-index:2}
+#pdf{position:relative;z-index:0}
 #textHi{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
-.textHighlight{
-  position:absolute;
-  background:var(--highlight);
-  border-radius:2px;
-  mix-blend-mode:multiply;
+#textLayer{position:absolute;left:0;top:0;z-index:2;user-select:text;-webkit-user-select:text;overflow:hidden}
+#textLayer span{
+  position:absolute;white-space:pre;transform-origin:0 0;color:rgba(0,0,0,.015);
+  user-select:text;-webkit-user-select:text;
 }
+#draw{position:absolute;left:0;top:0;background:transparent;touch-action:none;z-index:3;pointer-events:none}
+body.editing #draw{pointer-events:auto}
+body.editing #textLayer{pointer-events:none;user-select:none;-webkit-user-select:none}
+.textHighlight{position:absolute;background:var(--highlight);border-radius:2px;mix-blend-mode:multiply}
 .textHighlight.active{background:var(--highlight-strong)}
 #empty{margin-top:36px;width:min(315px,86vw);border-radius:28px;padding:22px 18px;text-align:center}
 #emptyIcon{width:52px;height:52px;margin:0 auto 12px;border-radius:20px;display:grid;place-items:center;font-size:25px;background:rgba(255,255,255,.11)}
@@ -73,29 +91,61 @@ canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px r
 #empty p{margin:0;color:var(--muted);line-height:1.32;font-size:14px;font-weight:560}
 
 #bottomArea{flex:0 0 auto;padding:7px 16px calc(env(safe-area-inset-bottom) + 4px);background:transparent}
-#indexPanel{
-  display:none;margin-bottom:8px;border-radius:25px;padding:8px 6px;align-items:center;gap:6px;
+#chapterPanel{
+  display:none;margin-bottom:8px;border-radius:25px;padding:8px;max-height:34vh;overflow:auto;
 }
+body.chapters #chapterPanel{display:block}
+.chapterRow{
+  width:100%;border:0;border-radius:14px;background:rgba(255,255,255,.08);color:var(--text);
+  text-align:left;padding:9px 11px;margin-bottom:6px;font-size:13px;font-weight:720;
+}
+.chapterRow small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.chapterRow.level1{margin-left:10px;width:calc(100% - 10px)}
+.chapterRow.level2{margin-left:20px;width:calc(100% - 20px)}
+.chapterRow.level3{margin-left:30px;width:calc(100% - 30px)}
+#zoomPanel{
+  display:none;margin-bottom:8px;border-radius:25px;padding:9px;align-items:center;gap:8px;
+}
+body.zooming #zoomPanel{display:flex}
+.zoomBtn{
+  border:0;border-radius:17px;width:42px;height:38px;background:rgba(255,255,255,.10);color:var(--text);
+  font-size:20px;font-weight:900;
+}
+#zoomLabel{flex:1;text-align:center;font-size:14px;font-weight:850;color:var(--text)}
+#indexPreview{
+  display:none;margin-bottom:6px;border-radius:20px;padding:9px 12px;color:var(--text);
+  font-size:13px;line-height:1.25;font-weight:650;max-height:56px;overflow:hidden;
+}
+body.indexing #indexPreview{display:block}
+body.refining #indexPreview{max-height:142px}
+#previewHint{color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}
+#lineRefiner{display:none;margin-top:7px;gap:6px;overflow-x:auto;padding-bottom:2px}
+body.refining #lineRefiner{display:flex}
+.lineChip{
+  flex:0 0 auto;max-width:210px;border:0;border-radius:14px;padding:8px 10px;
+  background:rgba(255,255,255,.10);color:var(--text);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.lineChip.off{opacity:.42;text-decoration:line-through}
+#indexPanel{display:none;margin-bottom:8px;border-radius:25px;padding:8px 6px;align-items:center;gap:6px}
 body.indexing #indexPanel{display:flex}
+body.refining #indexPanel{padding:5px 6px}
 #indexTrack{
   flex:1;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
   padding:10px 42%; scroll-padding-inline:42%;
 }
+body.refining #indexTrack{padding-top:4px;padding-bottom:4px}
 #indexTrack::-webkit-scrollbar{display:none}
 .indexChip{
   flex:0 0 auto;border:0;border-radius:18px;padding:11px 15px;background:rgba(255,255,255,.10);color:var(--text);
   font-size:15px;font-weight:900;scroll-snap-align:center;transition:transform .12s ease, opacity .12s ease, background .12s ease;
   transform:scale(.78);opacity:.48;
 }
+body.refining .indexChip{padding:7px 11px;font-size:12px}
 .indexChip.near{transform:scale(.9);opacity:.7}
 .indexChip.active{transform:scale(1.18);opacity:1;background:rgba(255,214,10,.30);box-shadow:inset 0 0 0 1px rgba(255,214,10,.75)}
 .indexChip.pinned::after{content:" •";color:rgb(255,214,10)}
-.panelBtn{
-  border:0;border-radius:17px;width:36px;height:36px;background:rgba(255,255,255,.10);color:var(--text);font-size:18px;font-weight:900;
-}
-#utilityBar{
-  display:grid;grid-template-columns:42px 42px 1fr 42px 42px;gap:8px;align-items:center;
-}
+.panelBtn{border:0;border-radius:17px;width:36px;height:36px;background:rgba(255,255,255,.10);color:var(--text);font-size:18px;font-weight:900}
+#utilityBar{display:grid;grid-template-columns:42px 42px 1fr 42px 42px;gap:8px;align-items:center}
 .circleNav{
   border:0;border-radius:50%;width:42px;height:42px;background:rgba(35,37,44,.82);color:var(--text);
   font-size:23px;font-weight:850;display:grid;place-items:center;
@@ -108,14 +158,14 @@ body.indexing #indexPanel{display:flex}
   border:1px solid var(--stroke);box-shadow:0 10px 26px rgba(0,0,0,.26), inset 0 1px rgba(255,255,255,.12);
   backdrop-filter:blur(32px) saturate(1.65);-webkit-backdrop-filter:blur(32px) saturate(1.65);
 }
-.actionBtn{border:0;border-radius:17px;background:transparent;color:var(--text);font-size:13px;font-weight:780}
+.actionBtn{border:0;border-radius:17px;background:transparent;color:var(--text);font-size:12px;font-weight:780}
 .actionBtn.active{background:rgba(255,255,255,.16);box-shadow:0 5px 14px rgba(0,0,0,.20),inset 0 1px rgba(255,255,255,.15)}
-#viewControls{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+#viewControls{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
 #editControls{display:none;grid-template-columns:1fr 1fr 1fr;gap:3px}
 body.editing #viewControls{display:none}
 body.editing #editControls{display:grid}
 body.editing #editBtn{background:linear-gradient(180deg,rgba(10,132,255,.94),rgba(0,102,220,.94));color:white}
-body.indexing #indexBtn{background:rgba(255,214,10,.20)}
+body.indexing #indexBtn, body.chapters #chaptersBtn, body.zooming #zoomToggleBtn{background:rgba(255,214,10,.20)}
 #toast{
   position:fixed;z-index:20;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 120px);
   padding:8px 12px;border-radius:999px;background:rgba(20,20,30,.82);color:white;font-size:12px;font-weight:750;
@@ -124,78 +174,25 @@ body.indexing #indexBtn{background:rgba(255,214,10,.20)}
 #toast.show{opacity:1}
 
 #topZoomBtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:19px}
-#pageJump{
-  display:none;
-  margin:2px auto 0;
-  width:96px;
-  border:0;
-  outline:0;
-  border-radius:999px;
-  padding:3px 8px 4px;
-  background:rgba(255,255,255,.16);
-  color:var(--text);
-  text-align:center;
-  font-size:15px;
-  font-weight:850;
-}
-body.jumping #titleMain{font-size:11px;color:var(--muted)}
-body.jumping #titleSub{display:none}
-body.jumping #pageJump{display:block}
 body.indexing #clearIndexBtn{display:block}
 #clearIndexBtn{display:none}
 body.indexing #copyBtn{display:none}
 body.indexing #viewControls{grid-template-columns:1fr 1fr}
 body:not(.indexing) #viewControls{grid-template-columns:1fr 1fr}
-#chapterPanel{
-  display:none;
-  margin-bottom:8px;
-  border-radius:25px;
-  padding:8px;
-  max-height:34vh;
-  overflow:auto;
+#textLayer{
+  pointer-events:none !important;
+  user-select:none !important;
+  -webkit-user-select:none !important;
 }
-body.chapters #chapterPanel{display:block}
-.chapterRow{
-  width:100%;
-  border:0;
-  border-radius:14px;
-  background:rgba(255,255,255,.08);
-  color:var(--text);
-  text-align:left;
-  padding:9px 11px;
-  margin-bottom:6px;
-  font-size:13px;
-  font-weight:720;
-}
-.chapterRow small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-.chapterRow.level1{margin-left:10px;width:calc(100% - 10px)}
-.chapterRow.level2{margin-left:20px;width:calc(100% - 20px)}
-.chapterRow.level3{margin-left:30px;width:calc(100% - 30px)}
-#zoomPanel{
-  display:none;
-  margin-bottom:8px;
-  border-radius:25px;
-  padding:9px;
-  align-items:center;
-  gap:8px;
-}
-body.zooming #zoomPanel{display:flex}
-.zoomBtn{
-  border:0;
-  border-radius:17px;
-  width:42px;
-  height:38px;
-  background:rgba(255,255,255,.10);
-  color:var(--text);
-  font-size:20px;
-  font-weight:900;
-}
-#zoomLabel{flex:1;text-align:center;font-size:14px;font-weight:850;color:var(--text)}
+#copyBtn.active, body.copying #copyBtn{background:rgba(10,132,255,.22)}
+
+
+#copyBtn.active, body.copying #copyBtn{background:rgba(10,132,255,.22)}
 #copyPanel{
   display:none;
   margin-bottom:8px;
   border-radius:25px;
-  padding:10px 76px 44px 10px;
+  padding:10px 56px 38px 10px;
   gap:10px;
   align-items:center;
   position:relative;
@@ -215,55 +212,47 @@ body.copying #copyPanel{display:flex}
   font-weight:650;
 }
 #copyDoBtn{
-  position:absolute;
-  right:12px;
-  bottom:12px;
   border:0;
   border-radius:17px;
-  height:36px;
+  height:38px;
   padding:0 12px;
-  background:rgba(10,132,255,.34);
+  background:rgba(10,132,255,.25);
   color:var(--text);
   font-size:13px;
   font-weight:850;
-  z-index:40;
 }
 #copyLineSlider{
-  position:fixed;
-  z-index:45;
-  right:8px;
-  top:calc(env(safe-area-inset-top) + 70px);
-  bottom:calc(env(safe-area-inset-bottom) + 94px);
-  width:38px;
-  display:none;
+  position:absolute;
+  right:18px;
+  top:12px;
+  bottom:36px;
+  width:24px;
   touch-action:none;
-  pointer-events:auto;
 }
-body.copying #copyLineSlider{display:block}
 #copyLineSlider::before{
   content:"";
   position:absolute;
   top:0;
   bottom:0;
-  left:17px;
+  left:10px;
   width:4px;
   border-radius:999px;
-  background:rgba(255,255,255,.20);
+  background:rgba(255,255,255,.18);
 }
 #copyLineFill{
   position:absolute;
-  left:17px;
+  left:10px;
   width:4px;
   border-radius:999px;
-  background:rgba(10,132,255,.95);
+  background:rgba(10,132,255,.9);
 }
 .copyHandle{
   position:absolute;
-  width:38px;
-  height:38px;
+  width:24px;
+  height:24px;
   border-radius:50%;
   background:#0a84ff;
-  box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.35);
+  box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.3);
   left:0;
   transform:translateY(-50%);
   touch-action:none;
@@ -271,9 +260,9 @@ body.copying #copyLineSlider{display:block}
 #copyCharSlider{
   position:absolute;
   left:18px;
-  right:82px;
+  right:70px;
   bottom:12px;
-  height:34px;
+  height:24px;
   touch-action:none;
 }
 #copyCharSlider::before{
@@ -281,30 +270,158 @@ body.copying #copyLineSlider{display:block}
   position:absolute;
   left:0;
   right:0;
-  top:15px;
+  top:10px;
   height:4px;
   border-radius:999px;
-  background:rgba(255,255,255,.20);
+  background:rgba(255,255,255,.18);
 }
 #copyCharFill{
   position:absolute;
-  top:15px;
+  top:10px;
   height:4px;
   border-radius:999px;
-  background:rgba(10,132,255,.95);
+  background:rgba(10,132,255,.9);
 }
 .charHandle{
   position:absolute;
-  width:34px;
-  height:34px;
+  width:24px;
+  height:24px;
   border-radius:50%;
   background:#0a84ff;
-  box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.35);
+  box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.3);
   top:0;
   transform:translateX(-50%);
   touch-action:none;
 }
-body.copying #copyTextPreview{margin-right:28px}
+
+
+/* v31 viewport/copy overrides */
+body.copying #copyPanel{
+  display:flex;
+}
+#copyPanel{
+  padding:10px 12px 44px 10px !important;
+}
+#copyLineSlider{
+  position:fixed !important;
+  z-index:35;
+  right:8px !important;
+  top:calc(env(safe-area-inset-top) + 72px) !important;
+  bottom:calc(env(safe-area-inset-bottom) + 104px) !important;
+  width:34px !important;
+  display:none;
+}
+body.copying #copyLineSlider{display:block}
+#copyLineSlider::before{
+  left:15px !important;
+  width:4px !important;
+}
+#copyLineFill{
+  left:15px !important;
+  width:4px !important;
+}
+.copyHandle{
+  width:34px !important;
+  height:34px !important;
+  left:0 !important;
+}
+#copyCharSlider{
+  position:fixed !important;
+  z-index:35;
+  left:20px !important;
+  right:20px !important;
+  bottom:calc(env(safe-area-inset-bottom) + 74px) !important;
+  height:34px !important;
+  display:none;
+}
+body.copying #copyCharSlider{display:block}
+#copyCharSlider::before{
+  top:15px !important;
+  height:4px !important;
+}
+#copyCharFill{
+  top:15px !important;
+  height:4px !important;
+}
+.charHandle{
+  width:34px !important;
+  height:34px !important;
+}
+body.copying #copyTextPreview{
+  margin-right:32px;
+}
+
+
+/* v32 copy/viewport polish */
+#copyPanel{
+  padding:10px 64px 52px 10px !important;
+  margin-bottom:12px !important;
+  z-index:20;
+}
+#copyTextPreview{
+  padding-right:58px !important;
+}
+#copyDoBtn{
+  position:absolute !important;
+  right:14px !important;
+  top:12px !important;
+  z-index:45 !important;
+  height:38px !important;
+  min-width:48px !important;
+}
+#copyLineSlider{
+  position:fixed !important;
+  z-index:60 !important;
+  right:8px !important;
+  top:calc(env(safe-area-inset-top) + 70px) !important;
+  bottom:calc(env(safe-area-inset-bottom) + 118px) !important;
+  width:38px !important;
+  display:none;
+  pointer-events:auto !important;
+}
+body.copying #copyLineSlider{display:block !important}
+#copyLineSlider::before{
+  left:17px !important;
+  width:4px !important;
+  background:rgba(10,132,255,.32) !important;
+}
+#copyLineFill{
+  left:17px !important;
+  width:4px !important;
+  background:rgba(10,132,255,.95) !important;
+}
+.copyHandle{
+  width:38px !important;
+  height:38px !important;
+  left:0 !important;
+  z-index:61 !important;
+}
+#copyCharSlider{
+  position:fixed !important;
+  z-index:60 !important;
+  left:18px !important;
+  right:18px !important;
+  bottom:calc(env(safe-area-inset-bottom) + 98px) !important;
+  height:38px !important;
+  display:none;
+  pointer-events:auto !important;
+}
+body.copying #copyCharSlider{display:block !important}
+#copyCharSlider::before{
+  top:17px !important;
+  height:4px !important;
+  background:rgba(10,132,255,.32) !important;
+}
+#copyCharFill{
+  top:17px !important;
+  height:4px !important;
+  background:rgba(10,132,255,.95) !important;
+}
+.charHandle{
+  width:38px !important;
+  height:38px !important;
+  z-index:61 !important;
+}
 
 </style>
 </head>
@@ -327,16 +444,47 @@ body.copying #copyTextPreview{margin-right:28px}
     <div id="stage" hidden>
       <canvas id="pdf"></canvas>
       <div id="textHi"></div>
+      <div id="textLayer"></div>
       <canvas id="draw"></canvas>
     </div>
     <div id="empty" class="frost">
       <div id="emptyIcon">📄</div>
       <h1>Open a PDF</h1>
-      <p>Swipe pages in view mode. Use Index to scan part callouts on the page.</p>
+      <p>Chapters, zoom, saved place, index callouts, and markups.</p>
     </div>
   </div>
 
   <div id="bottomArea">
+    <div id="copyPanel" class="frost">
+      <div id="copyTextPreview">Use the right handles to choose start/end lines. Use the bottom handles to trim characters.</div>
+      <button id="copyDoBtn">Copy</button>
+      <div id="copyLineSlider">
+        <div id="copyLineFill"></div>
+        <div id="lineStartHandle" class="copyHandle"></div>
+        <div id="lineEndHandle" class="copyHandle"></div>
+      </div>
+      <div id="copyCharSlider">
+        <div id="copyCharFill"></div>
+        <div id="charStartHandle" class="charHandle"></div>
+        <div id="charEndHandle" class="charHandle"></div>
+      </div>
+    </div>
+
+    <div id="chapterPanel" class="frost"></div>
+
+    <div id="zoomPanel" class="frost">
+      <button id="zoomOut" class="zoomBtn">−</button>
+      <div id="zoomLabel">100%</div>
+      <button id="zoomIn" class="zoomBtn">+</button>
+      <button id="zoomFit" class="zoomBtn">Fit</button>
+    </div>
+
+    <div id="indexPreview" class="frost">
+      <div id="previewText">No index selected</div>
+      <div id="previewHint">Tap this preview to refine highlighted lines</div>
+      <div id="lineRefiner"></div>
+    </div>
+
     <div id="indexPanel" class="frost">
       <button id="idxPrev" class="panelBtn">‹</button>
       <div id="indexTrack"></div>
@@ -370,12 +518,15 @@ import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
-let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,chaptersMode=false,zoomMode=false,copyMode=false;
+let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,refineMode=false,chaptersMode=false,zoomMode=false,copyMode=false;
 let shapesByPage={},start=null,current=null,swipeStart=null;
-let indexItemsByPage={}, activeIndex=null, pinnedIndexes={};
-let outlineItems=[], pageLinesByPage={};
-let zoomFactor=1, currentPageBaseWidth=1, currentPageBaseHeight=1;
+let indexItemsByPage={}, activeIndex=null;
+let pinnedIndexes={}; // session only
+let outlineItems=[];
+let pageLinesByPage={};
 let copyLineStart=0, copyLineEnd=0, copyCharStartVal=0, copyCharEndVal=0;
+let currentPageBaseWidth=1, currentPageBaseHeight=1;
+let zoomFactor=1; // 1 = fit width
 
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
 const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
@@ -383,17 +534,17 @@ const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),900)}
 function saveShapes(){if(pdfKey)localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage))}
 function loadShapes(){shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}')}
-function savePinned(){if(pdfKey)localStorage.setItem('indexPins_'+pdfKey,JSON.stringify(pinnedIndexes))}
-function loadPinned(){pinnedIndexes=JSON.parse(localStorage.getItem('indexPins_'+pdfKey)||'{}')}
+function savePlace(){if(pdfKey)localStorage.setItem('lastPlace_'+pdfKey,JSON.stringify({page:pageNum,zoom:zoomFactor}))}
+function loadPlace(){if(!pdfKey)return null;try{return JSON.parse(localStorage.getItem('lastPlace_'+pdfKey)||'null')}catch{return null}}
 function pageKey(){return String(pageNum)}
 function currentShapes(){if(!shapesByPage[pageKey()])shapesByPage[pageKey()]=[];return shapesByPage[pageKey()]}
 function pagePins(){if(!pinnedIndexes[pageKey()])pinnedIndexes[pageKey()]=[];return pinnedIndexes[pageKey()]}
 
 function closePanels(except=''){
-  if(except!=='index'){indexMode=false;document.body.classList.remove('indexing','refining');activeIndex=null;}
-  if(except!=='chapters'){chaptersMode=false;document.body.classList.remove('chapters');}
-  if(except!=='zoom'){zoomMode=false;document.body.classList.remove('zooming');}
-  if(except!=='copy'){copyMode=false;document.body.classList.remove('copying');if(!indexMode) clearTextHighlights();}
+  if(except!=='index') { indexMode=false; refineMode=false; document.body.classList.remove('indexing','refining'); activeIndex=null; }
+  if(except!=='chapters') { chaptersMode=false; document.body.classList.remove('chapters'); }
+  if(except!=='zoom') { zoomMode=false; document.body.classList.remove('zooming'); }
+  if(except!=='copy') { copyMode=false; document.body.classList.remove('copying'); clearCopyHighlightIfNeeded(); }
 }
 function setEditMode(on){
   editMode=on;
@@ -404,8 +555,9 @@ function setEditMode(on){
 }
 function setIndexMode(on){
   closePanels(on?'index':'');
-  indexMode=on;
+  indexMode=on; refineMode=false;
   document.body.classList.toggle('indexing',indexMode);
+  document.body.classList.toggle('refining',false);
   if(indexMode) scanIndexesForPage();
   else activeIndex=null;
   renderTextHighlights();
@@ -426,11 +578,15 @@ function setCopyMode(on){
   copyMode=on;
   document.body.classList.toggle('copying',copyMode);
   if(copyMode) buildCopyLinesForPage();
-  else if(!indexMode) clearTextHighlights();
+  else clearCopyHighlightIfNeeded();
 }
-function setTool(t){
-  tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');eraseTool.classList.toggle('active',t==='erase');
+function setRefineMode(on){
+  if(!activeIndex) return;
+  refineMode=on;
+  document.body.classList.toggle('refining',refineMode);
+  renderPreview();
 }
+function setTool(t){tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');eraseTool.classList.toggle('active',t==='erase')}
 function pos(e){const r=drawCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}}
 function makeShape(a,b,type){return{type,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)}}
 function drawShape(s){
@@ -453,52 +609,6 @@ function eraseAt(p){
   toast('No shape hit');return false;
 }
 
-function clearTextHighlights(){textHi.innerHTML=''}
-function makeHiDiv(rect, active=false){
-  const W=drawCanvas.clientWidth,H=drawCanvas.clientHeight;
-  const d=document.createElement('div');
-  d.className='textHighlight'+(active?' active':'');
-  d.style.left=(rect.x*W)+'px';
-  d.style.top=(rect.y*H)+'px';
-  d.style.width=(rect.w*W)+'px';
-  d.style.height=(Math.max(rect.h*H,2))+'px';
-  return d;
-}
-function renderTextHighlights(){
-  clearTextHighlights();
-  const items=indexItemsByPage[pageKey()]||[];
-  const pins=pagePins();
-  const shown=[];
-  items.forEach(it=>{ if(pins.includes(it.label)) shown.push({it,active:false}); });
-  if(indexMode&&activeIndex) shown.push({it:activeIndex,active:true});
-  for(const row of shown){
-    const rects=row.it.rects && row.it.rects.length ? row.it.rects : [{x:0.02,y:row.it.y,w:.96,h:row.it.h}];
-    for(const r of rects) textHi.appendChild(makeHiDiv(r,row.active));
-  }
-}
-function styleCarousel(){
-  const chips=[...indexTrack.children];
-  if(!chips.length) return;
-  const trackRect=indexTrack.getBoundingClientRect();
-  const center=trackRect.left+trackRect.width/2;
-  let closest=null, best=Infinity;
-  chips.forEach((chip,i)=>{
-    const r=chip.getBoundingClientRect();
-    const c=r.left+r.width/2;
-    const dist=Math.abs(c-center);
-    chip.classList.remove('active','near');
-    if(dist<best){best=dist;closest={chip,i};}
-    if(dist<100) chip.classList.add('near');
-  });
-  if(closest){
-    const items=indexItemsByPage[pageKey()]||[];
-    closest.chip.classList.add('active');
-    activeIndex=items[closest.i]||activeIndex;
-    renderTextHighlights();
-  }
-}
-
-
 title.onclick=()=>{
   if(!doc || document.body.classList.contains('jumping')) return;
   document.body.classList.add('jumping');
@@ -514,14 +624,11 @@ function commitPageJump(){
 pageJump.addEventListener('keydown',e=>{if(e.key==='Enter')commitPageJump(); if(e.key==='Escape')document.body.classList.remove('jumping')});
 pageJump.addEventListener('blur',()=>{if(document.body.classList.contains('jumping'))commitPageJump()});
 
-function savePlace(){if(pdfKey)localStorage.setItem('lastPlace_'+pdfKey,JSON.stringify({page:pageNum,zoom:zoomFactor}))}
-function loadPlace(){if(!pdfKey)return null;try{return JSON.parse(localStorage.getItem('lastPlace_'+pdfKey)||'null')}catch{return null}}
-
 async function pageFromDest(dest){
   try{
     let d=dest;
     if(typeof d==='string') d=await doc.getDestination(d);
-    if(!Array.isArray(d)||!d[0]) return null;
+    if(!Array.isArray(d) || !d[0]) return null;
     const idx=await doc.getPageIndex(d[0]);
     return idx+1;
   }catch{return null}
@@ -546,100 +653,285 @@ async function loadChapters(){
     const b=document.createElement('button');
     b.className='chapterRow level'+Math.min(ch.level,3);
     b.innerHTML=`${ch.title}<small>${ch.page?'Page '+ch.page:'Page unavailable'}</small>`;
-    b.onclick=()=>{if(ch.page){pageNum=ch.page;setChaptersMode(false);renderPage(pageNum);}};
+    b.onclick=()=>{ if(ch.page){pageNum=ch.page;setChaptersMode(false);renderPage(pageNum);} };
     chapterPanel.appendChild(b);
   }
 }
-function updateZoomLabel(){zoomLabel.textContent=Math.round(zoomFactor*100)+'%'}
-function setZoom(z){
-  zoomFactor=Math.max(1,Math.min(3,z));
-  updateZoomLabel();
-  savePlace();
-  renderPage(pageNum);
-}
 
+function clearTextHighlights(){textHi.innerHTML=''}
+function makeHiDiv(rect, active=false){
+  const W=drawCanvas.clientWidth,H=drawCanvas.clientHeight;
+  const d=document.createElement('div');
+  d.className='textHighlight'+(active?' active':'');
+  d.style.left=(rect.x*W)+'px';d.style.top=(rect.y*H)+'px';d.style.width=(rect.w*W)+'px';d.style.height=(Math.max(rect.h*H,2))+'px';
+  return d;
+}
+function itemRects(item){if(!item)return[];if(item.selectedLines&&item.selectedLines.length)return item.lines.filter((_,i)=>item.selectedLines.includes(i)).flatMap(l=>l.rects);return item.rects||[]}
+function renderTextHighlights(){
+  clearTextHighlights();
+  const items=indexItemsByPage[pageKey()]||[];
+  const pins=pagePins();
+  const shown=[];
+  items.forEach(it=>{ if(pins.includes(it.label)) shown.push({it,active:false}); });
+  if(indexMode&&activeIndex) shown.push({it:activeIndex,active:true});
+  for(const row of shown){for(const r of itemRects(row.it)) textHi.appendChild(makeHiDiv(r,row.active));}
+}
+function renderPreview(){
+  if(!activeIndex){previewText.textContent='No index selected';lineRefiner.innerHTML='';return;}
+  const first=(activeIndex.lines&&activeIndex.lines[0]?.text)||activeIndex.label;
+  previewText.textContent=`${activeIndex.label}: ${first}`;
+  previewHint.textContent=refineMode?'Tap lines to include/exclude. Tap preview again to collapse.':'Tap this preview to refine highlighted lines';
+  lineRefiner.innerHTML='';
+  if(!refineMode) return;
+  if(!activeIndex.selectedLines) activeIndex.selectedLines=activeIndex.lines.map((_,i)=>i);
+  activeIndex.lines.forEach((line,i)=>{
+    const b=document.createElement('button');
+    b.className='lineChip';b.textContent=line.text||`Line ${i+1}`;
+    if(!activeIndex.selectedLines.includes(i)) b.classList.add('off');
+    b.onclick=(e)=>{e.stopPropagation();const arr=activeIndex.selectedLines;const idx=arr.indexOf(i);if(idx>=0)arr.splice(idx,1);else arr.push(i);b.classList.toggle('off');renderTextHighlights();};
+    lineRefiner.appendChild(b);
+  });
+}
+indexPreview.onclick=()=>setRefineMode(!refineMode);
+
+function styleCarousel(){
+  const chips=[...indexTrack.children]; if(!chips.length) return;
+  const trackRect=indexTrack.getBoundingClientRect(); const center=trackRect.left+trackRect.width/2;
+  let closest=null,best=Infinity;
+  chips.forEach((chip,i)=>{const r=chip.getBoundingClientRect();const c=r.left+r.width/2;const dist=Math.abs(c-center);chip.classList.remove('active','near');if(dist<best){best=dist;closest={chip,i};}if(dist<100) chip.classList.add('near');});
+  if(closest){const items=indexItemsByPage[pageKey()]||[];closest.chip.classList.add('active');const next=items[closest.i];if(next&&(!activeIndex||next.label!==activeIndex.label)){activeIndex=next;renderPreview();renderTextHighlights();}}
+}
+function lineGroups(chunks){
+  chunks.sort((a,b)=>a.y-b.y || a.x-b.x);
+  const lines=[];
+  for(const c of chunks){let line=lines.find(l=>Math.abs(l.y-c.y)<0.006);if(!line){line={y:c.y,items:[]};lines.push(line);}line.items.push(c);}
+  lines.forEach(l=>{
+    l.items.sort((a,b)=>a.x-b.x);l.text=l.items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+    const minX=Math.min(...l.items.map(i=>i.x)); const maxX=Math.max(...l.items.map(i=>i.x+i.w));
+    const minY=Math.min(...l.items.map(i=>i.y-i.h*.9)); const maxY=Math.max(...l.items.map(i=>i.y+i.h*.35));
+    l.rects=[{x:Math.max(0,minX-.003),y:Math.max(0,minY),w:Math.min(.98,maxX-minX+.006),h:Math.max(.006,maxY-minY)}];
+  });
+  return lines;
+}
 async function scanIndexesForPage(){
   if(!doc) return;
   const key=pageKey();
-  if(indexItemsByPage[key]){renderIndexCarousel();renderTextHighlights();return;}
+  if(indexItemsByPage[key]){renderIndexCarousel();renderPreview();renderTextHighlights();return;}
   const page=await doc.getPage(pageNum);
   const content=await page.getTextContent();
   const base=page.getViewport({scale:1});
   const chunks=[];
   for(const it of content.items){
-    const str=(it.str||'').trim();
-    if(!str) continue;
-    const x=it.transform[4]/base.width;
-    const y=1-(it.transform[5]/base.height);
-    const w=(it.width||0)/base.width;
-    const h=Math.max(.008, (Math.abs(it.transform[3])||8)/base.height);
+    const str=(it.str||'').trim(); if(!str) continue;
+    const x=it.transform[4]/base.width, y=1-(it.transform[5]/base.height), w=(it.width||0)/base.width, h=Math.max(.008,(Math.abs(it.transform[3])||8)/base.height);
     chunks.push({str,x,y,w,h});
   }
+  const lines=lineGroups(chunks);
   const hits=[];
-  for(const ch of chunks){
-    const m=ch.str.match(/(^|\s)(-\d{1,4}[A-Z]?)(?=\s|$)/i);
-    if(m) hits.push({label:m[2],x:ch.x,y:ch.y});
-  }
-  hits.sort((a,b)=>a.y-b.y || a.x-b.x);
-  const unique=[];
-  for(const h of hits){
-    if(unique.some(u=>u.label===h.label && Math.abs(u.y-h.y)<.015)) continue;
-    unique.push(h);
-  }
-  const items=unique.map((h,i)=>{
-    const next=unique[i+1];
-    const y0=Math.max(0,h.y-.018);
-    const y1=next ? Math.min(.98,next.y-.012) : Math.min(.98,h.y+.07);
-    const rects=chunks
-      .filter(c=>c.y>=y0 && c.y<=y1)
-      .map(c=>({x:Math.max(0,c.x-.003),y:Math.max(0,c.y-c.h*.9),w:Math.min(.98,c.w+.006),h:c.h*1.25}));
-    return {label:h.label,x:h.x,y:y0,h:Math.max(.025,y1-y0),rects};
+  lines.forEach((l,idx)=>{const m=l.text.match(/(^|\s)(-\d{1,4}[A-Z]?)(?=\s|$)/i); if(m) hits.push({label:m[2],lineIndex:idx,y:l.y});});
+  const items=hits.map((h,i)=>{
+    const next=hits[i+1]; const start=h.lineIndex; const end=next?Math.max(start+1,next.lineIndex):Math.min(lines.length,start+4);
+    const itemLines=lines.slice(start,end);
+    return {label:h.label,y:itemLines[0]?.y||h.y,lines:itemLines,selectedLines:[...Array(end-start).keys()],rects:itemLines.flatMap(l=>l.rects)};
   });
   indexItemsByPage[key]=items;
-  renderIndexCarousel();
-  toast(items.length?`Found ${items.length} indexes`:'No indexes found');
-  renderTextHighlights();
+  renderIndexCarousel(); toast(items.length?`Found ${items.length} indexes`:'No indexes found'); renderPreview(); renderTextHighlights();
 }
 function renderIndexCarousel(){
-  const items=indexItemsByPage[pageKey()]||[];
-  indexTrack.innerHTML='';
-  if(!items.length){
-    const b=document.createElement('button');b.className='indexChip';b.textContent='No indexes';indexTrack.appendChild(b);return;
-  }
+  const items=indexItemsByPage[pageKey()]||[]; indexTrack.innerHTML='';
+  if(!items.length){const b=document.createElement('button');b.className='indexChip';b.textContent='No indexes';indexTrack.appendChild(b);return;}
   const pins=pagePins();
   items.forEach((it,i)=>{
-    const b=document.createElement('button');
-    b.className='indexChip';
-    b.textContent=it.label;
-    if(pins.includes(it.label)) b.classList.add('pinned');
-    b.onclick=()=>{
-      activeIndex=it;
-      const arr=pagePins();
-      const idx=arr.indexOf(it.label);
-      if(idx>=0) arr.splice(idx,1); else arr.push(it.label);
-      savePinned(); renderIndexCarousel(); renderTextHighlights();
-      setTimeout(()=>{indexTrack.children[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});styleCarousel();},20);
-      toast(idx>=0?`${it.label} unpinned`:`${it.label} pinned`);
-    };
+    const b=document.createElement('button'); b.className='indexChip'; b.textContent=it.label; if(pins.includes(it.label)) b.classList.add('pinned');
+    b.onclick=()=>{activeIndex=it;const arr=pagePins();const idx=arr.indexOf(it.label);if(idx>=0) arr.splice(idx,1); else arr.push(it.label);renderIndexCarousel();renderPreview();renderTextHighlights();setTimeout(()=>{indexTrack.children[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});styleCarousel();},20);toast(idx>=0?`${it.label} unpinned`:`${it.label} pinned`);};
     indexTrack.appendChild(b);
   });
   setTimeout(styleCarousel,30);
 }
 let scrollTimer=null;
-indexTrack.addEventListener('scroll',()=>{
-  styleCarousel();
-  clearTimeout(scrollTimer);
-  scrollTimer=setTimeout(styleCarousel,80);
-});
-function bumpIndex(dir){
-  const items=indexItemsByPage[pageKey()]||[];
-  if(!items.length) return;
-  let i=activeIndex?items.findIndex(x=>x.label===activeIndex.label):-1;
-  i=(i+dir+items.length)%items.length;
-  activeIndex=items[i];
-  const chip=indexTrack.children[i];
-  if(chip) chip.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-  setTimeout(()=>{styleCarousel();renderTextHighlights();},120);
+indexTrack.addEventListener('scroll',()=>{styleCarousel();clearTimeout(scrollTimer);scrollTimer=setTimeout(styleCarousel,80);});
+function bumpIndex(dir){const items=indexItemsByPage[pageKey()]||[]; if(!items.length)return; let i=activeIndex?items.findIndex(x=>x.label===activeIndex.label):-1; i=(i+dir+items.length)%items.length; activeIndex=items[i]; const chip=indexTrack.children[i]; if(chip) chip.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); setTimeout(()=>{styleCarousel();renderPreview();renderTextHighlights();},120);}
+
+async function renderTextLayer(page, displayScale){
+  textLayer.innerHTML='';
+  const content=await page.getTextContent();
+  const viewport=page.getViewport({scale:displayScale});
+  const copyChunks=[];
+  for(const item of content.items){
+    const str=item.str||''; if(!str.trim()) continue;
+    const tx=pdfjsLib.Util.transform(viewport.transform,item.transform);
+    const fontHeight=Math.hypot(tx[2],tx[3]) || 8;
+    const span=document.createElement('span');
+    span.textContent=str; span.style.left=tx[4]+'px'; span.style.top=(tx[5]-fontHeight)+'px'; span.style.fontSize=fontHeight+'px';
+    span.style.width=((item.width||0)*displayScale)+'px'; span.style.height=(fontHeight*1.3)+'px'; span.style.fontFamily='sans-serif';
+    textLayer.appendChild(span);
+  }
+  if(typeof lineGroups==='function') pageLinesByPage[pageKey()]=lineGroups(copyChunks);
+  ensureCopyLinesFromTextContentFallback(copyChunks);
+}
+function updateZoomLabel(){zoomLabel.textContent=Math.round(zoomFactor*100)+'%'}
+function setZoom(z){
+  zoomFactor=Math.max(.75,Math.min(3,z));
+  updateZoomLabel();
+  savePlace();
+  renderPage(pageNum).then(()=>{ if(zoomFactor<=1.01) clampHorizontalAtFit(); });
+}
+
+
+
+
+function clearCopyHighlightIfNeeded(){
+  if(!indexMode) clearTextHighlights();
+  else renderTextHighlights();
+}
+function selectedCopyFullText(){
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return '';
+  const a=Math.max(0,Math.min(copyLineStart,copyLineEnd));
+  const b=Math.max(0,Math.max(copyLineStart,copyLineEnd));
+  return lines.slice(a,b+1).map(l=>l.text||'').join('\n');
+}
+async function buildCopyLinesForPage(){
+  let lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length && doc){
+    try{
+      const page=await doc.getPage(pageNum);
+      const content=await page.getTextContent();
+      const base=page.getViewport({scale:1});
+      const chunks=content.items.map(it=>{
+        const str=(it.str||'').trim();
+        if(!str) return null;
+        return {str,x:it.transform[4]/base.width,y:1-(it.transform[5]/base.height),w:(it.width||0)/base.width,h:Math.max(.008,(Math.abs(it.transform[3])||8)/base.height)};
+      }).filter(Boolean);
+      if(typeof lineGroups==='function') pageLinesByPage[pageKey()]=lineGroups(chunks);
+      ensureCopyLinesFromTextContentFallback(chunks);
+      lines=pageLinesByPage[pageKey()]||[];
+    }catch{}
+  }
+  if(!lines.length){
+    copyTextPreview.textContent='No text found on this page.';
+    return;
+  }
+  copyLineStart=Math.max(0,Math.min(copyLineStart,lines.length-1));
+  copyLineEnd=Math.max(copyLineStart,Math.min(copyLineEnd||copyLineStart,lines.length-1));
+  const full=selectedCopyFullText();
+  copyCharStartVal=0;
+  copyCharEndVal=full.length;
+  updateCopyPreview();
+}
+function updateCopySliderVisuals(){
+  const lines=pageLinesByPage[pageKey()]||[];
+  const maxLine=Math.max(1,lines.length-1);
+  const a=Math.min(copyLineStart,copyLineEnd)/maxLine;
+  const b=Math.max(copyLineStart,copyLineEnd)/maxLine;
+  lineStartHandle.style.top=(a*100)+'%';
+  lineEndHandle.style.top=(b*100)+'%';
+  copyLineFill.style.top=(a*100)+'%';
+  copyLineFill.style.height=((b-a)*100)+'%';
+
+  const full=selectedCopyFullText();
+  const len=Math.max(1,full.length);
+  const ca=copyCharStartVal/len;
+  const cb=copyCharEndVal/len;
+  charStartHandle.style.left=(ca*100)+'%';
+  charEndHandle.style.left=(cb*100)+'%';
+  copyCharFill.style.left=(ca*100)+'%';
+  copyCharFill.style.width=((cb-ca)*100)+'%';
+}
+function updateCopyPreview(){
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return;
+  const full=selectedCopyFullText();
+  const len=full.length;
+  copyCharStartVal=Math.max(0,Math.min(copyCharStartVal,len));
+  copyCharEndVal=Math.max(copyCharStartVal,Math.min(copyCharEndVal||len,len));
+  const selected=full.slice(copyCharStartVal,copyCharEndVal);
+  copyTextPreview.textContent=selected || full || 'Blank line';
+  renderCopyHighlight();
+  updateCopySliderVisuals();
+}
+function renderCopyHighlight(){
+  if(!copyMode) return;
+  clearTextHighlights();
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return;
+  const a=Math.min(copyLineStart,copyLineEnd);
+  const b=Math.max(copyLineStart,copyLineEnd);
+  const selectedLines=lines.slice(a,b+1);
+  const full=selectedLines.map(l=>l.text||'').join('\n');
+  const start=copyCharStartVal;
+  const end=copyCharEndVal || full.length;
+  let offset=0;
+  selectedLines.forEach((line)=>{
+    const text=line.text||'';
+    const lineStart=offset;
+    const lineEnd=offset+text.length;
+    const overlapStart=Math.max(start,lineStart);
+    const overlapEnd=Math.min(end,lineEnd);
+    if(overlapEnd>overlapStart){
+      const rect=line.rects?.[0];
+      if(rect){
+        const localStart=(overlapStart-lineStart)/Math.max(1,text.length);
+        const localEnd=(overlapEnd-lineStart)/Math.max(1,text.length);
+        textHi.appendChild(makeHiDiv({
+          x:rect.x+rect.w*localStart,
+          y:rect.y,
+          w:Math.max(.005,rect.w*(localEnd-localStart)),
+          h:rect.h
+        },true));
+      }
+    }
+    offset += text.length + 1;
+  });
+}
+function setCopyLineFromY(clientY, which){
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return;
+  const r=copyLineSlider.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(clientY-r.top)/Math.max(1,r.height)));
+  const val=Math.round(pct*(lines.length-1));
+  if(which==='start') copyLineStart=Math.min(val,copyLineEnd);
+  else copyLineEnd=Math.max(val,copyLineStart);
+  const full=selectedCopyFullText();
+  copyCharStartVal=0;
+  copyCharEndVal=full.length;
+  updateCopyPreview();
+}
+function setCopyCharFromX(clientX, which){
+  const full=selectedCopyFullText();
+  const r=copyCharSlider.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(clientX-r.left)/Math.max(1,r.width)));
+  const val=Math.round(pct*full.length);
+  if(which==='start') copyCharStartVal=Math.min(val,copyCharEndVal);
+  else copyCharEndVal=Math.max(val,copyCharStartVal);
+  updateCopyPreview();
+}
+function attachHandleDrag(el, moveFn){
+  el.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    el.setPointerCapture(e.pointerId);
+    moveFn(e);
+    const move=ev=>{ev.preventDefault();ev.stopPropagation();moveFn(ev);};
+    const up=ev=>{
+      ev.preventDefault();
+      ev.stopPropagation();
+      try{el.releasePointerCapture(e.pointerId)}catch{}
+      el.removeEventListener('pointermove',move);
+      el.removeEventListener('pointerup',up);
+    };
+    el.addEventListener('pointermove',move);
+    el.addEventListener('pointerup',up);
+  });
+}
+async function copyCurrentSelection(){
+  const full=selectedCopyFullText();
+  const text=full.slice(copyCharStartVal,copyCharEndVal);
+  if(!text.trim()){toast('Nothing to copy');return;}
+  try{await navigator.clipboard.writeText(text);toast('Copied');}
+  catch{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Copied');
+  }
 }
 
 
@@ -663,150 +955,10 @@ function ensureCopyLinesFromTextContentFallback(chunks){
     return {y:g.y,text,items:g.items,rects:[{x:Math.max(0,minX-.003),y:Math.max(0,minY),w:Math.min(.98,maxX-minX+.006),h:Math.max(.006,maxY-minY)}]};
   }).filter(l=>l.text);
 }
-function selectedCopyFullText(){
-  const lines=pageLinesByPage[pageKey()]||[];
-  if(!lines.length) return '';
-  const a=Math.max(0,Math.min(copyLineStart,copyLineEnd));
-  const b=Math.max(0,Math.max(copyLineStart,copyLineEnd));
-  return lines.slice(a,b+1).map(l=>l.text||'').join('\\n');
-}
-async function buildCopyLinesForPage(){
-  let lines=pageLinesByPage[pageKey()]||[];
-  if(!lines.length && doc){
-    try{
-      const page=await doc.getPage(pageNum);
-      const content=await page.getTextContent();
-      const base=page.getViewport({scale:1});
-      const chunks=content.items.map(it=>{
-        const str=(it.str||'').trim();
-        if(!str) return null;
-        return {str,x:it.transform[4]/base.width,y:1-(it.transform[5]/base.height),w:(it.width||0)/base.width,h:Math.max(.008,(Math.abs(it.transform[3])||8)/base.height)};
-      }).filter(Boolean);
-      pageLinesByPage[pageKey()]=lineGroups(chunks);
-      ensureCopyLinesFromTextContentFallback(chunks);
-      lines=pageLinesByPage[pageKey()]||[];
-    }catch{}
-  }
-  if(!lines.length){copyTextPreview.textContent='No text found on this page.';return;}
-  copyLineStart=Math.max(0,Math.min(copyLineStart,lines.length-1));
-  copyLineEnd=Math.max(copyLineStart,Math.min(copyLineEnd||copyLineStart,lines.length-1));
-  const full=selectedCopyFullText();
-  copyCharStartVal=0;
-  copyCharEndVal=full.length;
-  updateCopyPreview();
-}
-function updateCopySliderVisuals(){
-  const lines=pageLinesByPage[pageKey()]||[];
-  const maxLine=Math.max(1,lines.length-1);
-  const a=Math.min(copyLineStart,copyLineEnd)/maxLine;
-  const b=Math.max(copyLineStart,copyLineEnd)/maxLine;
-  lineStartHandle.style.top=(a*100)+'%';
-  lineEndHandle.style.top=(b*100)+'%';
-  copyLineFill.style.top=(a*100)+'%';
-  copyLineFill.style.height=((b-a)*100)+'%';
-  const full=selectedCopyFullText();
-  const len=Math.max(1,full.length);
-  const ca=copyCharStartVal/len;
-  const cb=copyCharEndVal/len;
-  charStartHandle.style.left=(ca*100)+'%';
-  charEndHandle.style.left=(cb*100)+'%';
-  copyCharFill.style.left=(ca*100)+'%';
-  copyCharFill.style.width=((cb-ca)*100)+'%';
-}
-function updateCopyPreview(){
-  const full=selectedCopyFullText();
-  const len=full.length;
-  copyCharStartVal=Math.max(0,Math.min(copyCharStartVal,len));
-  copyCharEndVal=Math.max(copyCharStartVal,Math.min(copyCharEndVal||len,len));
-  const selected=full.slice(copyCharStartVal,copyCharEndVal);
-  copyTextPreview.textContent=selected || full || 'Blank line';
-  renderCopyHighlight();
-  updateCopySliderVisuals();
-}
-function renderCopyHighlight(){
-  if(!copyMode) return;
-  clearTextHighlights();
-  const lines=pageLinesByPage[pageKey()]||[];
-  const a=Math.min(copyLineStart,copyLineEnd);
-  const b=Math.max(copyLineStart,copyLineEnd);
-  const selectedLines=lines.slice(a,b+1);
-  const full=selectedLines.map(l=>l.text||'').join('\\n');
-  const start=copyCharStartVal;
-  const end=copyCharEndVal||full.length;
-  let offset=0;
-  selectedLines.forEach(line=>{
-    const text=line.text||'';
-    const lineStart=offset, lineEnd=offset+text.length;
-    const overlapStart=Math.max(start,lineStart), overlapEnd=Math.min(end,lineEnd);
-    if(overlapEnd>overlapStart){
-      const rect=line.rects?.[0];
-      if(rect){
-        const localStart=(overlapStart-lineStart)/Math.max(1,text.length);
-        const localEnd=(overlapEnd-lineStart)/Math.max(1,text.length);
-        textHi.appendChild(makeHiDiv({x:rect.x+rect.w*localStart,y:rect.y,w:Math.max(.005,rect.w*(localEnd-localStart)),h:rect.h},true));
-      }
-    }
-    offset+=text.length+1;
-  });
-}
-function setCopyLineFromY(clientY,which){
-  const lines=pageLinesByPage[pageKey()]||[];
-  if(!lines.length)return;
-  const r=copyLineSlider.getBoundingClientRect();
-  const pct=Math.max(0,Math.min(1,(clientY-r.top)/Math.max(1,r.height)));
-  const val=Math.round(pct*(lines.length-1));
-  if(which==='start') copyLineStart=Math.min(val,copyLineEnd);
-  else copyLineEnd=Math.max(val,copyLineStart);
-  const full=selectedCopyFullText();
-  copyCharStartVal=0; copyCharEndVal=full.length;
-  updateCopyPreview();
-}
-function setCopyCharFromX(clientX,which){
-  const full=selectedCopyFullText();
-  const r=copyCharSlider.getBoundingClientRect();
-  const pct=Math.max(0,Math.min(1,(clientX-r.left)/Math.max(1,r.width)));
-  const val=Math.round(pct*full.length);
-  if(which==='start') copyCharStartVal=Math.min(val,copyCharEndVal);
-  else copyCharEndVal=Math.max(val,copyCharStartVal);
-  updateCopyPreview();
-}
-function attachHandleDrag(el,moveFn){
-  el.addEventListener('pointerdown',e=>{
-    e.preventDefault(); e.stopPropagation(); el.setPointerCapture(e.pointerId); moveFn(e);
-    const move=ev=>{ev.preventDefault();ev.stopPropagation();moveFn(ev);};
-    const up=ev=>{ev.preventDefault();ev.stopPropagation();try{el.releasePointerCapture(e.pointerId)}catch{};el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);};
-    el.addEventListener('pointermove',move); el.addEventListener('pointerup',up);
-  });
-}
-async function copyCurrentSelection(){
-  const full=selectedCopyFullText();
-  const text=full.slice(copyCharStartVal,copyCharEndVal);
-  if(!text.trim()){toast('Nothing to copy');return;}
-  try{await navigator.clipboard.writeText(text);toast('Copied');}
-  catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Copied');}
-}
-
-
-async function extractPageLines(page){
-  const content=await page.getTextContent();
-  const chunks=[];
-  for(const it of content.items){
-    const str=(it.str||'').trim();
-    if(!str) continue;
-    chunks.push({
-      str,
-      x:it.transform[4]/currentPageBaseWidth,
-      y:1-(it.transform[5]/currentPageBaseHeight),
-      w:(it.width||0)/currentPageBaseWidth,
-      h:Math.max(.008,(Math.abs(it.transform[3])||8)/currentPageBaseHeight)
-    });
-  }
-  pageLinesByPage[pageKey()]=lineGroups(chunks);
-  ensureCopyLinesFromTextContentFallback(chunks);
-}
 
 async function renderPage(n){
   if(!doc||rendering)return;rendering=true;
+  const oldX=viewer.scrollLeft, oldY=viewer.scrollTop;
   const page=await doc.getPage(n);
   const base=page.getViewport({scale:1});
   currentPageBaseWidth=base.width; currentPageBaseHeight=base.height;
@@ -817,14 +969,21 @@ async function renderPage(n){
   [pdfCanvas,drawCanvas].forEach(c=>{c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.width=(vp.width/dpr)+'px';c.style.height=(vp.height/dpr)+'px';});
   stage.style.width=(vp.width/dpr)+'px';stage.style.height=(vp.height/dpr)+'px';
   textHi.style.width=(vp.width/dpr)+'px';textHi.style.height=(vp.height/dpr)+'px';
+  textLayer.style.width=(vp.width/dpr)+'px';textLayer.style.height=(vp.height/dpr)+'px';
   await page.render({canvasContext:pdfCtx,viewport:vp}).promise;
-  await extractPageLines(page);
+  await renderTextLayer(page,displayScale);
+  if(copyMode) buildCopyLinesForPage();
   titleSub.textContent=`Page ${pageNum} of ${doc.numPages} • ${Math.round(zoomFactor*100)}%`;
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
-  activeIndex=null;clearTextHighlights();
+  activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
   drawAll(false);renderTextHighlights();rendering=false;
-savePlace();
+  if(n===pageNum){
+    viewer.scrollTop=oldY;
+    if(zoomFactor > 1.01) viewer.scrollLeft=oldX;
+    else clampHorizontalAtFit();
+  }
+  savePlace();
 }
 function goPrev(){if(pageNum>1){pageNum--;renderPage(pageNum)}}
 function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum)}}
@@ -832,49 +991,112 @@ function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum)}}
 openBtn.onclick=()=>file.click();
 file.onchange=async()=>{
   const f=file.files[0];if(!f)return;
-  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();loadPinned();indexItemsByPage={};
-  doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pageNum=1;
+  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();pinnedIndexes={};indexItemsByPage={};
+  doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+  const place=loadPlace();
+  pageNum=Math.max(1,Math.min(doc.numPages,place?.page||1));
+  zoomFactor=Math.max(.75,Math.min(3,place?.zoom||1));
   empty.hidden=true;stage.hidden=false;
-  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,copyBtn,chaptersBtn,topZoomBtn].forEach(b=>b.disabled=false);
-  setTool('rect');setEditMode(false);setIndexMode(false);setZoomMode(false);setChaptersMode(false);await loadChapters();updateZoomLabel();await renderPage(pageNum);if(place?.page) toast(`Restored page ${pageNum}`);
+  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,topZoomBtn].forEach(b=>b.disabled=false);
+  setTool('rect');setEditMode(false);setIndexMode(false);setZoomMode(false);setChaptersMode(false);
+  await loadChapters();
+  updateZoomLabel();
+  await renderPage(pageNum);
+  if(place?.page) toast(`Restored page ${pageNum}`);
 };
 prev.onclick=goPrev;next.onclick=goNext;editBtn.onclick=()=>setEditMode(!editMode);
 rectTool.onclick=()=>setTool('rect');circleTool.onclick=()=>setTool('circle');eraseTool.onclick=()=>setTool('erase');
+indexBtn.onclick=()=>setIndexMode(!indexMode);
+clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];activeIndex=null;renderIndexCarousel();renderTextHighlights();toast('Page highlights cleared')};
 chaptersBtn.onclick=()=>setChaptersMode(!chaptersMode);
 topZoomBtn.onclick=()=>setZoomMode(!zoomMode);
 copyBtn.onclick=()=>setCopyMode(!copyMode);
-indexBtn.onclick=()=>setIndexMode(!indexMode);
-clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];savePinned();activeIndex=null;renderIndexCarousel();renderTextHighlights();toast('Page highlights cleared')};
-idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
 zoomOut.onclick=()=>setZoom(zoomFactor-.25);
 zoomIn.onclick=()=>setZoom(zoomFactor+.25);
 zoomFit.onclick=()=>setZoom(1);
+idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
+
 copyDoBtn.onclick=()=>copyCurrentSelection();
+copyPanel.addEventListener('pointerdown',e=>e.stopPropagation());
+copyPanel.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
+copyLineSlider.addEventListener('pointerdown',e=>e.stopPropagation());
+copyCharSlider.addEventListener('pointerdown',e=>e.stopPropagation());
+copyLineSlider.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
+copyCharSlider.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
 attachHandleDrag(lineStartHandle,e=>setCopyLineFromY(e.clientY,'start'));
 attachHandleDrag(lineEndHandle,e=>setCopyLineFromY(e.clientY,'end'));
 attachHandleDrag(charStartHandle,e=>setCopyCharFromX(e.clientX,'start'));
 attachHandleDrag(charEndHandle,e=>setCopyCharFromX(e.clientX,'end'));
-copyPanel.addEventListener('pointerdown',e=>e.stopPropagation());
-copyLineSlider.addEventListener('pointerdown',e=>e.stopPropagation());
 
+
+function clampHorizontalAtFit(){
+  if(!doc) return;
+  if(zoomFactor <= 1.01){
+    const maxX=Math.max(0,viewer.scrollWidth-viewer.clientWidth);
+    const center=maxX/2;
+    if(Math.abs(viewer.scrollLeft-center)>1) viewer.scrollLeft=center;
+  }
+}
+function beginSwipe(x,y){
+  if(!doc || editMode) return;
+  swipeStart={x,y,t:Date.now(),sx:viewer.scrollLeft,sy:viewer.scrollTop};
+}
+function endSwipe(x,y){
+  if(!doc || editMode || !swipeStart) return;
+  const dx=x-swipeStart.x;
+  const dy=y-swipeStart.y;
+  const dt=Date.now()-swipeStart.t;
+  const movedX=Math.abs(viewer.scrollLeft-swipeStart.sx);
+  swipeStart=null;
+
+  if(zoomFactor <= 1.01) clampHorizontalAtFit();
+
+  // At fit zoom, horizontal swipe changes pages.
+  // At zoomed-in levels, horizontal movement is treated as panning, not page nav.
+  if(zoomFactor <= 1.01 && Math.abs(dx)>72 && Math.abs(dx)>Math.abs(dy)*1.55 && dt<850 && movedX<18){
+    dx<0 ? goNext() : goPrev();
+  }
+}
+
+viewer.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch' || e.pointerType==='pen' || e.pointerType==='mouse'){
+    beginSwipe(e.clientX,e.clientY);
+  }
+}, {passive:true});
+
+viewer.addEventListener('pointerup',e=>{
+  endSwipe(e.clientX,e.clientY);
+}, {passive:true});
+
+viewer.addEventListener('touchstart',e=>{
+  const t=e.changedTouches[0];
+  if(t) beginSwipe(t.clientX,t.clientY);
+}, {passive:true});
+
+viewer.addEventListener('touchend',e=>{
+  const t=e.changedTouches[0];
+  if(t) endSwipe(t.clientX,t.clientY);
+}, {passive:true});
 drawCanvas.addEventListener('pointerdown',e=>{
-  if(!doc)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);
-  if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}
+  if(!doc||!editMode)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);
   if(tool==='erase'){eraseAt(p);start=null;return;}
   start=p;current=start;
 });
 drawCanvas.addEventListener('pointermove',e=>{if(editMode&&start&&tool!=='erase'){current=pos(e);drawAll(true)}});
 drawCanvas.addEventListener('pointerup',e=>{
-  if(!doc)return;
-  if(!editMode&&swipeStart){
-    const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;swipeStart=null;
-    if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){dx<0?goNext():goPrev();return;}
-    return;
-  }
-  if(editMode&&start&&tool!=='erase'){
+  if(!doc||!editMode)return;
+  if(start&&tool!=='erase'){
     current=pos(e);const s=makeShape(start,current,tool);start=null;current=null;
     if(s.w>.01&&s.h>.01){currentShapes().push(s);saveShapes();}
     drawAll(false);
+  }
+});
+let horizontalSnapTimer=null;
+viewer.addEventListener('scroll',()=>{
+  if(doc) savePlace();
+  if(doc && zoomFactor <= 1.01){
+    clearTimeout(horizontalSnapTimer);
+    horizontalSnapTimer=setTimeout(clampHorizontalAtFit,60);
   }
 });
 let resizeTimer=null;addEventListener('resize',()=>{if(!doc)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>renderPage(pageNum),250)});
