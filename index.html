@@ -2,235 +2,196 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#12141a">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>PDF Markup</title>
+<meta name="theme-color" content="#111827">
+<title>PDF Annotate Test</title>
 <style>
-:root{
-  color-scheme:dark;
-  --text:#f5f5f7;
-  --muted:rgba(245,245,247,.68);
-  --panel:rgba(42,44,52,.90);
-  --button:rgba(255,255,255,.14);
-  --stroke:rgba(255,255,255,.18);
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{
-  margin:0;
-  width:100%;
-  min-height:100%;
-  overflow:hidden;
-  background:#12141a;
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;
-}
-body::before{
-  content:"";
-  position:fixed;
-  inset:-80px 0 -120px 0;
-  z-index:-1;
-  background:
-    radial-gradient(circle at 15% 0%, rgba(10,132,255,.18), transparent 34%),
-    radial-gradient(circle at 86% 12%, rgba(191,90,242,.14), transparent 32%),
-    linear-gradient(145deg,#12141a,#1c1f27 55%,#202633);
-}
-#app{
-  height:100vh;
-  height:100dvh;
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
-  gap:14px;
-  padding:
-    calc(env(safe-area-inset-top) + 10px)
-    12px
-    calc(env(safe-area-inset-bottom) + 4px)
-    12px;
-  overflow:hidden;
-}
-.frost{
-  background:var(--panel);
-  backdrop-filter:blur(34px) saturate(1.9);
-  -webkit-backdrop-filter:blur(34px) saturate(1.9);
-  border:1px solid var(--stroke);
-  box-shadow:0 18px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.14);
-}
-#topbar{
-  border-radius:30px;
-  min-height:72px;
-  padding:12px 58px 10px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-}
-#openBtn{position:absolute;left:8px;top:50%;transform:translateY(-50%)}
-.iconBtn{
-  border:0;border-radius:21px;width:48px;height:48px;
-  background:var(--button);color:var(--text);font-size:20px;
-  display:grid;place-items:center;
-  box-shadow:inset 0 1px rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.20);
-}
-.iconBtn:disabled{opacity:.35}
-#title{text-align:center;min-width:0}
-#titleMain{
-  font-size:18px;line-height:22px;font-weight:850;letter-spacing:-.03em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;
-}
-#titleSub{
-  margin:5px auto 0;width:max-content;border-radius:999px;padding:4px 10px;
-  background:rgba(255,255,255,.10);color:var(--muted);
-  font-size:12px;line-height:14px;font-weight:800;
-}
-#viewer{
-  min-height:0;
-  overflow:auto;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:8px 0;
-  -webkit-overflow-scrolling:touch;
-}
+body{margin:0;background:#111827;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden}
+header{display:flex;gap:6px;align-items:center;padding:12px;background:#111827;border-bottom:1px solid #444;overflow-x:auto}
+button,input::file-selector-button{background:#2563eb;color:#fff;border:0;border-radius:10px;padding:9px 12px;white-space:nowrap}
+button.active{background:#f59e0b;color:#111}
+button.danger{background:#dc2626}
+#pageInfo{margin-left:auto;white-space:nowrap}
+#viewer{height:calc(100vh - 58px);overflow:auto;display:flex;justify-content:center;padding:12px;background:#374151;box-sizing:border-box}
 #stage{position:relative}
-canvas{
-  display:block;background:#fff;border-radius:16px;
-  box-shadow:0 24px 64px rgba(0,0,0,.25);
-}
+canvas{display:block;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.4)}
 #draw{position:absolute;left:0;top:0;background:transparent;touch-action:none}
-#empty{
-  margin-top:44px;width:min(340px,90vw);border-radius:34px;
-  padding:28px 22px;text-align:center;
-}
-#emptyIcon{
-  width:62px;height:62px;margin:0 auto 14px;border-radius:24px;
-  display:grid;place-items:center;font-size:30px;background:rgba(255,255,255,.12);
-}
-#empty h1{font-size:25px;margin:0 0 8px;letter-spacing:-.03em}
-#empty p{margin:0;color:var(--muted);line-height:1.35;font-size:15px;font-weight:560}
-#file{position:absolute;left:-9999px}
-#utilityBar{
-  border-radius:28px;
-  padding:7px;
-  display:grid;
-  grid-template-columns:1fr 50px;
-  gap:7px;
-  align-items:center;
-}
-#centerControls{
-  min-width:0;height:48px;border-radius:21px;background:rgba(255,255,255,.08);
-  padding:4px;display:grid;grid-template-columns:1fr;
-  box-shadow:inset 0 1px 4px rgba(0,0,0,.18);
-}
-.actionBtn{
-  border:0;border-radius:17px;background:transparent;color:var(--text);
-  font-size:15px;font-weight:850;
-}
-.actionBtn.active{
-  background:rgba(255,255,255,.18);
-  box-shadow:0 7px 18px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.18);
-}
-#viewControls{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-#editControls{display:none;grid-template-columns:1fr 1fr 1fr;gap:4px}
-body.editing #viewControls{display:none}
-body.editing #editControls{display:grid}
-body.editing #editBtn{background:linear-gradient(180deg,rgba(10,132,255,.95),rgba(0,102,220,.95));color:white}
-#toast{
-  position:fixed;z-index:20;left:50%;transform:translateX(-50%);
-  bottom:calc(env(safe-area-inset-bottom) + 84px);
-  padding:9px 13px;border-radius:999px;background:rgba(20,20,30,.82);
-  color:white;font-size:13px;font-weight:750;opacity:0;transition:opacity .2s ease;
-  pointer-events:none;
-}
-#toast.show{opacity:1}
+#msg{margin-top:70px;color:#ddd}
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="topbar" class="frost">
-    <button id="openBtn" class="iconBtn" aria-label="Open PDF">📁</button>
-    <div id="title">
-      <div id="titleMain">PDF Markup</div>
-      <div id="titleSub">Open a PDF</div>
-    </div>
-    <input id="file" type="file" accept="application/pdf">
-  </div>
+<header>
+<input id="file" type="file" accept="application/pdf">
+<button id="prev" disabled>Prev</button>
+<button id="next" disabled>Next</button>
+<button id="rectTool" disabled>Rect</button>
+<button id="circleTool" disabled>Circle</button>
+<button id="clearPage" class="danger" disabled>Clear</button>
+<span id="pageInfo">No PDF</span>
+</header>
 
-  <div id="viewer">
-    <div id="stage" hidden>
-      <canvas id="pdf"></canvas>
-      <canvas id="draw"></canvas>
-    </div>
-    <div id="empty" class="frost">
-      <div id="emptyIcon">📄</div>
-      <h1>Open a PDF</h1>
-      <p>Swipe pages in view mode. Tap Edit to draw or erase shapes.</p>
-    </div>
+<div id="viewer">
+  <div id="stage" hidden>
+    <canvas id="pdf"></canvas>
+    <canvas id="draw"></canvas>
   </div>
-
-  <div id="utilityBar" class="frost">
-    <div id="centerControls">
-      <div id="viewControls">
-        <button id="prev" class="actionBtn" disabled>‹ Prev</button>
-        <button id="next" class="actionBtn" disabled>Next ›</button>
-      </div>
-      <div id="editControls">
-        <button id="rectTool" class="actionBtn active" disabled>Rect</button>
-        <button id="circleTool" class="actionBtn" disabled>Circle</button>
-        <button id="eraseTool" class="actionBtn" disabled>Erase</button>
-      </div>
-    </div>
-    <button id="editBtn" class="iconBtn" disabled aria-label="Edit">✎</button>
-  </div>
+  <div id="msg">Choose a PDF</div>
 </div>
-<div id="toast">Edit mode</div>
 
 <script type="module">
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
+
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
-let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false;
-let shapesByPage={},start=null,current=null,swipeStart=null;
+let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect';
+let shapesByPage={},start=null,current=null;
+
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
 const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
 
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),800);}
-function saveShapes(){if(pdfKey)localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage));}
-function loadShapes(){shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}');}
-function pageKey(){return String(pageNum);}
-function currentShapes(){if(!shapesByPage[pageKey()])shapesByPage[pageKey()]=[];return shapesByPage[pageKey()];}
-function setEditMode(on){editMode=on;document.body.classList.toggle('editing',editMode);editBtn.textContent=editMode?'✓':'✎';toast(editMode?'Edit mode':'View mode');}
-function setTool(t){tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');eraseTool.classList.toggle('active',t==='erase');}
-function pos(e){const r=drawCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};}
-function makeShape(a,b,type){return{type,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};}
-function drawShape(s){const w0=drawCanvas.clientWidth,h0=drawCanvas.clientHeight,x=s.x*w0,y=s.y*h0,w=s.w*w0,h=s.h*h0;if(s.type==='rect'){drawCtx.beginPath();drawCtx.roundRect(x,y,w,h,7);drawCtx.fill();drawCtx.stroke();}else{drawCtx.beginPath();drawCtx.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,Math.PI*2);drawCtx.fill();drawCtx.stroke();}}
-function drawAll(preview=false){drawCtx.clearRect(0,0,drawCanvas.width,drawCanvas.height);const scale=drawCanvas.width/drawCanvas.clientWidth;drawCtx.save();drawCtx.scale(scale,scale);drawCtx.lineWidth=3;drawCtx.strokeStyle='#ff453a';drawCtx.fillStyle='rgba(255,69,58,.13)';currentShapes().forEach(drawShape);if(preview&&start&&current)drawShape(makeShape(start,current,tool));drawCtx.restore();}
-function eraseAt(p){const arr=currentShapes();for(let i=arr.length-1;i>=0;i--){const s=arr[i];if(p.x>=s.x&&p.x<=s.x+s.w&&p.y>=s.y&&p.y<=s.y+s.h){arr.splice(i,1);saveShapes();drawAll(false);toast('Shape erased');return true;}}toast('No shape hit');return false;}
+function saveShapes(){
+  if(!pdfKey)return;
+  localStorage.setItem('annotations_'+pdfKey, JSON.stringify(shapesByPage));
+}
+function loadShapes(){
+  shapesByPage = JSON.parse(localStorage.getItem('annotations_'+pdfKey) || '{}');
+}
+function currentShapes(){
+  const key=String(pageNum);
+  if(!shapesByPage[key]) shapesByPage[key]=[];
+  return shapesByPage[key];
+}
+function setTool(t){
+  tool=t;
+  rectTool.classList.toggle('active',t==='rect');
+  circleTool.classList.toggle('active',t==='circle');
+}
+function drawAll(preview=false){
+  drawCtx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+  const scale = drawCanvas.width / drawCanvas.clientWidth;
+  drawCtx.save();
+  drawCtx.scale(scale,scale);
+  drawCtx.lineWidth=3;
+  drawCtx.strokeStyle='#ef4444';
+  drawCtx.fillStyle='rgba(239,68,68,.12)';
+  for(const s of currentShapes()){
+    drawShape(s);
+  }
+  if(preview && start && current){
+    drawShape(makeShape(start,current,tool));
+  }
+  drawCtx.restore();
+}
+function drawShape(s){
+  if(s.type==='rect'){
+    drawCtx.beginPath();
+    drawCtx.rect(s.x,s.y,s.w,s.h);
+    drawCtx.fill();
+    drawCtx.stroke();
+  } else if(s.type==='circle'){
+    const cx=s.x+s.w/2, cy=s.y+s.h/2;
+    const r=Math.max(Math.abs(s.w),Math.abs(s.h))/2;
+    drawCtx.beginPath();
+    drawCtx.ellipse(cx,cy,Math.abs(s.w)/2,Math.abs(s.h)/2,0,0,Math.PI*2);
+    drawCtx.fill();
+    drawCtx.stroke();
+  }
+}
+function pos(e){
+  const r=drawCanvas.getBoundingClientRect();
+  const touch=e.touches ? e.touches[0] : e;
+  return {x:touch.clientX-r.left,y:touch.clientY-r.top};
+}
+function makeShape(a,b,type){
+  return {
+    type,
+    x:Math.min(a.x,b.x),
+    y:Math.min(a.y,b.y),
+    w:Math.abs(b.x-a.x),
+    h:Math.abs(b.y-a.y)
+  };
+}
+
 async function renderPage(n){
-  if(!doc||rendering)return; rendering=true;
+  if(!doc||rendering)return;
+  rendering=true;
   const page=await doc.getPage(n);
   const base=page.getViewport({scale:1});
-  const displayScale=(Math.max(280,viewer.clientWidth))/base.width;
+  const displayScale=(Math.max(280,viewer.clientWidth-24))/base.width;
   const dpr=window.devicePixelRatio||1;
   const vp=page.getViewport({scale:displayScale*dpr});
-  [pdfCanvas,drawCanvas].forEach(c=>{c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.width=(vp.width/dpr)+'px';c.style.height=(vp.height/dpr)+'px';});
-  stage.style.width=(vp.width/dpr)+'px';stage.style.height=(vp.height/dpr)+'px';
+
+  pdfCanvas.width=vp.width;
+  pdfCanvas.height=vp.height;
+  pdfCanvas.style.width=(vp.width/dpr)+'px';
+  pdfCanvas.style.height=(vp.height/dpr)+'px';
+
+  drawCanvas.width=vp.width;
+  drawCanvas.height=vp.height;
+  drawCanvas.style.width=(vp.width/dpr)+'px';
+  drawCanvas.style.height=(vp.height/dpr)+'px';
+  stage.style.width=(vp.width/dpr)+'px';
+  stage.style.height=(vp.height/dpr)+'px';
+
   await page.render({canvasContext:pdfCtx,viewport:vp}).promise;
-  titleSub.textContent=`Page ${pageNum} of ${doc.numPages}`;
-  prev.disabled=pageNum<=1; next.disabled=pageNum>=doc.numPages;
-  drawAll(false); rendering=false;
+
+  pageInfo.textContent=`Page ${pageNum} / ${doc.numPages}`;
+  prev.disabled=pageNum<=1;
+  next.disabled=pageNum>=doc.numPages;
+  drawAll(false);
+  rendering=false;
 }
-function goPrev(){if(pageNum>1){pageNum--;renderPage(pageNum);}}
-function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum);}}
-openBtn.onclick=()=>file.click();
-file.onchange=async()=>{const f=file.files[0];if(!f)return;pdfKey=f.name;titleMain.textContent=f.name;loadShapes();doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pageNum=1;empty.hidden=true;stage.hidden=false;[prev,next,rectTool,circleTool,eraseTool,editBtn].forEach(b=>b.disabled=false);setTool('rect');setEditMode(false);await renderPage(pageNum);};
-prev.onclick=goPrev; next.onclick=goNext; editBtn.onclick=()=>setEditMode(!editMode); rectTool.onclick=()=>setTool('rect'); circleTool.onclick=()=>setTool('circle'); eraseTool.onclick=()=>setTool('erase');
-drawCanvas.addEventListener('pointerdown',e=>{if(!doc)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}if(tool==='erase'){eraseAt(p);start=null;return;}start=p;current=start;});
-drawCanvas.addEventListener('pointermove',e=>{if(editMode&&start&&tool!=='erase'){current=pos(e);drawAll(true);}});
-drawCanvas.addEventListener('pointerup',e=>{if(!doc)return;if(!editMode&&swipeStart){const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;swipeStart=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){dx<0?goNext():goPrev();return;}return;}if(editMode&&start&&tool!=='erase'){current=pos(e);const s=makeShape(start,current,tool);start=null;current=null;if(s.w>.01&&s.h>.01){currentShapes().push(s);saveShapes();}drawAll(false);}});
-let resizeTimer=null;addEventListener('resize',()=>{if(!doc)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>renderPage(pageNum),250);});
+
+file.onchange=async()=>{
+  const f=file.files[0]; if(!f)return;
+  pdfKey=f.name; // easy version: annotations are tied to the file name
+  loadShapes();
+  doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+  pageNum=1;
+  msg.hidden=true;
+  stage.hidden=false;
+  prev.disabled=false; next.disabled=false; rectTool.disabled=false; circleTool.disabled=false; clearPage.disabled=false;
+  setTool('rect');
+  renderPage(pageNum);
+};
+
+prev.onclick=()=>{if(pageNum>1){pageNum--;renderPage(pageNum);}};
+next.onclick=()=>{if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum);}};
+rectTool.onclick=()=>setTool('rect');
+circleTool.onclick=()=>setTool('circle');
+
+clearPage.onclick=()=>{
+  if(!doc)return;
+  shapesByPage[String(pageNum)]=[];
+  saveShapes();
+  drawAll(false);
+};
+
+drawCanvas.addEventListener('pointerdown',e=>{
+  if(!doc)return;
+  drawCanvas.setPointerCapture(e.pointerId);
+  start=pos(e);
+  current=start;
+});
+drawCanvas.addEventListener('pointermove',e=>{
+  if(!start)return;
+  current=pos(e);
+  drawAll(true);
+});
+drawCanvas.addEventListener('pointerup',e=>{
+  if(!start)return;
+  current=pos(e);
+  const s=makeShape(start,current,tool);
+  start=null; current=null;
+  if(s.w>8 && s.h>8){
+    currentShapes().push(s);
+    saveShapes();
+  }
+  drawAll(false);
+});
+addEventListener('resize',()=>doc&&renderPage(pageNum));
 </script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 {
-  "name": "PDF Markup",
+  "name": "PDF Annotate Test",
   "short_name": "PDF Markup",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#12141a",
-  "theme_color": "#12141a",
+  "background_color": "#111827",
+  "theme_color": "#111827",
   "icons": []
 }
