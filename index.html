@@ -61,15 +61,8 @@ body.jumping #pageJump{display:block}
 #file{position:absolute;left:-9999px}
 
 #viewer{
-  flex:1 1 auto;
-  min-height:0;
-  overflow:auto;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:3px 16px 10px;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
+  flex:1 1 auto;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;
+  padding:3px 16px 10px;-webkit-overflow-scrolling:touch;
 }
 #stage{position:relative}
 canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px rgba(0,0,0,.24)}
@@ -294,135 +287,6 @@ body.copying #copyPanel{display:flex}
   touch-action:none;
 }
 
-
-/* v31 viewport/copy overrides */
-body.copying #copyPanel{
-  display:flex;
-}
-#copyPanel{
-  padding:10px 12px 44px 10px !important;
-}
-#copyLineSlider{
-  position:fixed !important;
-  z-index:35;
-  right:8px !important;
-  top:calc(env(safe-area-inset-top) + 72px) !important;
-  bottom:calc(env(safe-area-inset-bottom) + 104px) !important;
-  width:34px !important;
-  display:none;
-}
-body.copying #copyLineSlider{display:block}
-#copyLineSlider::before{
-  left:15px !important;
-  width:4px !important;
-}
-#copyLineFill{
-  left:15px !important;
-  width:4px !important;
-}
-.copyHandle{
-  width:34px !important;
-  height:34px !important;
-  left:0 !important;
-}
-#copyCharSlider{
-  position:fixed !important;
-  z-index:35;
-  left:20px !important;
-  right:20px !important;
-  bottom:calc(env(safe-area-inset-bottom) + 74px) !important;
-  height:34px !important;
-  display:none;
-}
-body.copying #copyCharSlider{display:block}
-#copyCharSlider::before{
-  top:15px !important;
-  height:4px !important;
-}
-#copyCharFill{
-  top:15px !important;
-  height:4px !important;
-}
-.charHandle{
-  width:34px !important;
-  height:34px !important;
-}
-body.copying #copyTextPreview{
-  margin-right:32px;
-}
-
-
-/* v32 copy/viewport polish */
-#copyPanel{
-  padding:10px 64px 52px 10px !important;
-  margin-bottom:12px !important;
-  z-index:20;
-}
-#copyTextPreview{
-  padding-right:58px !important;
-}
-#copyDoBtn{
-  position:absolute !important;
-  right:14px !important;
-  top:12px !important;
-  z-index:45 !important;
-  height:38px !important;
-  min-width:48px !important;
-}
-#copyLineSlider{
-  position:fixed !important;
-  z-index:60 !important;
-  right:8px !important;
-  top:calc(env(safe-area-inset-top) + 70px) !important;
-  bottom:calc(env(safe-area-inset-bottom) + 118px) !important;
-  width:38px !important;
-  display:none;
-  pointer-events:auto !important;
-}
-body.copying #copyLineSlider{display:block !important}
-#copyLineSlider::before{
-  left:17px !important;
-  width:4px !important;
-  background:rgba(10,132,255,.32) !important;
-}
-#copyLineFill{
-  left:17px !important;
-  width:4px !important;
-  background:rgba(10,132,255,.95) !important;
-}
-.copyHandle{
-  width:38px !important;
-  height:38px !important;
-  left:0 !important;
-  z-index:61 !important;
-}
-#copyCharSlider{
-  position:fixed !important;
-  z-index:60 !important;
-  left:18px !important;
-  right:18px !important;
-  bottom:calc(env(safe-area-inset-bottom) + 98px) !important;
-  height:38px !important;
-  display:none;
-  pointer-events:auto !important;
-}
-body.copying #copyCharSlider{display:block !important}
-#copyCharSlider::before{
-  top:17px !important;
-  height:4px !important;
-  background:rgba(10,132,255,.32) !important;
-}
-#copyCharFill{
-  top:17px !important;
-  height:4px !important;
-  background:rgba(10,132,255,.95) !important;
-}
-.charHandle{
-  width:38px !important;
-  height:38px !important;
-  z-index:61 !important;
-}
-
 </style>
 </head>
 <body>
@@ -525,7 +389,6 @@ let pinnedIndexes={}; // session only
 let outlineItems=[];
 let pageLinesByPage={};
 let copyLineStart=0, copyLineEnd=0, copyCharStartVal=0, copyCharEndVal=0;
-let currentPageBaseWidth=1, currentPageBaseHeight=1;
 let zoomFactor=1; // 1 = fit width
 
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
@@ -767,14 +630,13 @@ async function renderTextLayer(page, displayScale){
     textLayer.appendChild(span);
   }
   if(typeof lineGroups==='function') pageLinesByPage[pageKey()]=lineGroups(copyChunks);
-  ensureCopyLinesFromTextContentFallback(copyChunks);
 }
 function updateZoomLabel(){zoomLabel.textContent=Math.round(zoomFactor*100)+'%'}
 function setZoom(z){
   zoomFactor=Math.max(.75,Math.min(3,z));
   updateZoomLabel();
   savePlace();
-  renderPage(pageNum).then(()=>{ if(zoomFactor<=1.01) clampHorizontalAtFit(); });
+  renderPage(pageNum);
 }
 
 
@@ -791,23 +653,8 @@ function selectedCopyFullText(){
   const b=Math.max(0,Math.max(copyLineStart,copyLineEnd));
   return lines.slice(a,b+1).map(l=>l.text||'').join('\n');
 }
-async function buildCopyLinesForPage(){
-  let lines=pageLinesByPage[pageKey()]||[];
-  if(!lines.length && doc){
-    try{
-      const page=await doc.getPage(pageNum);
-      const content=await page.getTextContent();
-      const base=page.getViewport({scale:1});
-      const chunks=content.items.map(it=>{
-        const str=(it.str||'').trim();
-        if(!str) return null;
-        return {str,x:it.transform[4]/base.width,y:1-(it.transform[5]/base.height),w:(it.width||0)/base.width,h:Math.max(.008,(Math.abs(it.transform[3])||8)/base.height)};
-      }).filter(Boolean);
-      if(typeof lineGroups==='function') pageLinesByPage[pageKey()]=lineGroups(chunks);
-      ensureCopyLinesFromTextContentFallback(chunks);
-      lines=pageLinesByPage[pageKey()]||[];
-    }catch{}
-  }
+function buildCopyLinesForPage(){
+  const lines=pageLinesByPage[pageKey()]||[];
   if(!lines.length){
     copyTextPreview.textContent='No text found on this page.';
     return;
@@ -934,34 +781,11 @@ async function copyCurrentSelection(){
   }
 }
 
-
-function ensureCopyLinesFromTextContentFallback(chunks){
-  if((pageLinesByPage[pageKey()]||[]).length) return;
-  if(!chunks || !chunks.length) return;
-  const sorted=[...chunks].sort((a,b)=>a.y-b.y || a.x-b.x);
-  const groups=[];
-  for(const c of sorted){
-    let g=groups.find(x=>Math.abs(x.y-c.y)<0.012);
-    if(!g){g={y:c.y,items:[]};groups.push(g);}
-    g.items.push(c);
-  }
-  pageLinesByPage[pageKey()]=groups.map(g=>{
-    g.items.sort((a,b)=>a.x-b.x);
-    const text=g.items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
-    const minX=Math.min(...g.items.map(i=>i.x));
-    const maxX=Math.max(...g.items.map(i=>i.x+i.w));
-    const minY=Math.min(...g.items.map(i=>i.y-i.h*.9));
-    const maxY=Math.max(...g.items.map(i=>i.y+i.h*.35));
-    return {y:g.y,text,items:g.items,rects:[{x:Math.max(0,minX-.003),y:Math.max(0,minY),w:Math.min(.98,maxX-minX+.006),h:Math.max(.006,maxY-minY)}]};
-  }).filter(l=>l.text);
-}
-
 async function renderPage(n){
   if(!doc||rendering)return;rendering=true;
   const oldX=viewer.scrollLeft, oldY=viewer.scrollTop;
   const page=await doc.getPage(n);
   const base=page.getViewport({scale:1});
-  currentPageBaseWidth=base.width; currentPageBaseHeight=base.height;
   const fitScale=(Math.max(280,viewer.clientWidth-4))/base.width;
   const displayScale=fitScale*zoomFactor;
   const dpr=window.devicePixelRatio||1;
@@ -978,11 +802,7 @@ async function renderPage(n){
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
   drawAll(false);renderTextHighlights();rendering=false;
-  if(n===pageNum){
-    viewer.scrollTop=oldY;
-    if(zoomFactor > 1.01) viewer.scrollLeft=oldX;
-    else clampHorizontalAtFit();
-  }
+  if(n===pageNum){viewer.scrollLeft=oldX; viewer.scrollTop=oldY;}
   savePlace();
 }
 function goPrev(){if(pageNum>1){pageNum--;renderPage(pageNum)}}
@@ -1017,26 +837,12 @@ zoomFit.onclick=()=>setZoom(1);
 idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
 
 copyDoBtn.onclick=()=>copyCurrentSelection();
-copyPanel.addEventListener('pointerdown',e=>e.stopPropagation());
-copyPanel.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
-copyLineSlider.addEventListener('pointerdown',e=>e.stopPropagation());
-copyCharSlider.addEventListener('pointerdown',e=>e.stopPropagation());
-copyLineSlider.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
-copyCharSlider.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
 attachHandleDrag(lineStartHandle,e=>setCopyLineFromY(e.clientY,'start'));
 attachHandleDrag(lineEndHandle,e=>setCopyLineFromY(e.clientY,'end'));
 attachHandleDrag(charStartHandle,e=>setCopyCharFromX(e.clientX,'start'));
 attachHandleDrag(charEndHandle,e=>setCopyCharFromX(e.clientX,'end'));
 
 
-function clampHorizontalAtFit(){
-  if(!doc) return;
-  if(zoomFactor <= 1.01){
-    const maxX=Math.max(0,viewer.scrollWidth-viewer.clientWidth);
-    const center=maxX/2;
-    if(Math.abs(viewer.scrollLeft-center)>1) viewer.scrollLeft=center;
-  }
-}
 function beginSwipe(x,y){
   if(!doc || editMode) return;
   swipeStart={x,y,t:Date.now(),sx:viewer.scrollLeft,sy:viewer.scrollTop};
@@ -1046,18 +852,16 @@ function endSwipe(x,y){
   const dx=x-swipeStart.x;
   const dy=y-swipeStart.y;
   const dt=Date.now()-swipeStart.t;
-  const movedX=Math.abs(viewer.scrollLeft-swipeStart.sx);
   swipeStart=null;
 
-  if(zoomFactor <= 1.01) clampHorizontalAtFit();
-
-  // At fit zoom, horizontal swipe changes pages.
-  // At zoomed-in levels, horizontal movement is treated as panning, not page nav.
-  if(zoomFactor <= 1.01 && Math.abs(dx)>72 && Math.abs(dx)>Math.abs(dy)*1.55 && dt<850 && movedX<18){
+  // Only treat it as page navigation when it is clearly a fast horizontal swipe.
+  // This keeps vertical PDF scrolling and zoomed page panning from accidentally flipping pages.
+  if(Math.abs(dx)>72 && Math.abs(dx)>Math.abs(dy)*1.55 && dt<850){
     dx<0 ? goNext() : goPrev();
   }
 }
 
+// Pointer events work in the Home Screen PWA.
 viewer.addEventListener('pointerdown',e=>{
   if(e.pointerType==='touch' || e.pointerType==='pen' || e.pointerType==='mouse'){
     beginSwipe(e.clientX,e.clientY);
@@ -1068,6 +872,7 @@ viewer.addEventListener('pointerup',e=>{
   endSwipe(e.clientX,e.clientY);
 }, {passive:true});
 
+// Touch fallback for iOS/Safari oddities.
 viewer.addEventListener('touchstart',e=>{
   const t=e.changedTouches[0];
   if(t) beginSwipe(t.clientX,t.clientY);
@@ -1091,14 +896,7 @@ drawCanvas.addEventListener('pointerup',e=>{
     drawAll(false);
   }
 });
-let horizontalSnapTimer=null;
-viewer.addEventListener('scroll',()=>{
-  if(doc) savePlace();
-  if(doc && zoomFactor <= 1.01){
-    clearTimeout(horizontalSnapTimer);
-    horizontalSnapTimer=setTimeout(clampHorizontalAtFit,60);
-  }
-});
+viewer.addEventListener('scroll',()=>{if(doc) savePlace();});
 let resizeTimer=null;addEventListener('resize',()=>{if(!doc)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>renderPage(pageNum),250)});
 </script>
 </body>
