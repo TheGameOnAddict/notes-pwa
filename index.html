@@ -763,6 +763,7 @@ function setEditMode(on){
   if(editMode) closePanels('');
   document.body.classList.toggle('editing',editMode);
   editBtn.textContent=editMode?'✓':'✎';
+  renderTextHighlights();
   toast(editMode?'Edit mode':'View mode');
 }
 function setIndexMode(on){
@@ -1045,8 +1046,7 @@ async function getRobustPageLines(){
 }
 
 function clearCopyHighlightIfNeeded(){
-  if(!indexMode) clearTextHighlights();
-  else renderTextHighlights();
+  renderTextHighlights();
 }
 function selectedCopyFullText(){
   const lines=pageLinesByPage[pageKey()]||[];
