@@ -1,33 +1,154 @@
 <!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2563eb">
-<title>Notes</title>
-<style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#f5f5f7}
-header{background:#2563eb;color:#fff;padding:16px;font-size:24px;font-weight:700}
-#wrap{padding:16px}
-textarea{width:100%;height:90px;padding:10px;box-sizing:border-box}
-button{margin-top:10px;padding:10px 16px}
-.note{background:#fff;padding:12px;margin-top:12px;border-radius:10px}
-.small{float:right}
-</style></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <link rel="manifest" href="manifest.json" />
+  <title>PDF Nav Test</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #111827;
+      color: white;
+      overflow: hidden;
+    }
+    header {
+      padding: calc(12px + env(safe-area-inset-top)) 12px 10px;
+      background: #111827;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    button, input[type="file"]::file-selector-button {
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 15px;
+      background: #2563eb;
+      color: white;
+    }
+    button:disabled { opacity: .45; }
+    #fileInput { max-width: 145px; }
+    #pageInfo { white-space: nowrap; font-size: 14px; opacity: .9; margin-left: auto; }
+    #viewerWrap {
+      height: calc(100vh - 72px - env(safe-area-inset-top));
+      overflow: auto;
+      background: #374151;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 14px;
+      box-sizing: border-box;
+    }
+    canvas {
+      background: white;
+      max-width: 100%;
+      height: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+      border-radius: 4px;
+    }
+    #empty {
+      text-align: center;
+      margin-top: 80px;
+      max-width: 320px;
+      color: rgba(255,255,255,.8);
+      line-height: 1.4;
+    }
+  </style>
+</head>
 <body>
-<header>Notes</header>
-<div id="wrap">
-<textarea id="txt" placeholder="Write a note..."></textarea><br>
-<button onclick="add()">Add Note</button>
-<div id="list"></div>
-</div>
-<script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js');}
-let notes=JSON.parse(localStorage.getItem('notes')||'[]');
-function save(){localStorage.setItem('notes',JSON.stringify(notes));render();}
-function add(){let t=txt.value.trim();if(!t)return;notes.unshift({t});txt.value='';save();}
-function del(i){notes.splice(i,1);save();}
-function render(){list.innerHTML='';notes.forEach((n,i)=>{let d=document.createElement('div');d.className='note';d.innerHTML='<button class="small" onclick="del('+i+')">Delete</button>'+n.t.replace(/\n/g,'<br>');list.appendChild(d);});}
-render();
-</script>
-</body></html>
+  <header>
+    <input id="fileInput" type="file" accept="application/pdf" />
+    <button id="prevBtn" disabled>Prev</button>
+    <button id="nextBtn" disabled>Next</button>
+    <span id="pageInfo">No PDF</span>
+  </header>
+
+  <main id="viewerWrap">
+    <div id="empty">Upload a PDF. This test keeps the file local on your phone and renders it inside the app.</div>
+    <canvas id="pdfCanvas" hidden></canvas>
+  </main>
+
+  <script type="module">
+    import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs";
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
+
+    const fileInput = document.getElementById("fileInput");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const pageInfo = document.getElementById("pageInfo");
+    const canvas = document.getElementById("pdfCanvas");
+    const empty = document.getElementById("empty");
+    const wrap = document.getElementById("viewerWrap");
+    const ctx = canvas.getContext("2d");
+
+    let pdfDoc = null;
+    let pageNum = 1;
+    let rendering = false;
+
+    async function renderPage(num) {
+      if (!pdfDoc || rendering) return;
+      rendering = true;
+
+      const page = await pdfDoc.getPage(num);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const maxWidth = Math.max(280, wrap.clientWidth - 28);
+      const scale = maxWidth / baseViewport.width;
+      const viewport = page.getViewport({ scale });
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      pageInfo.textContent = `Page ${pageNum} / ${pdfDoc.numPages}`;
+      prevBtn.disabled = pageNum <= 1;
+      nextBtn.disabled = pageNum >= pdfDoc.numPages;
+      rendering = false;
+    }
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const buffer = await file.arrayBuffer();
+      pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+      pageNum = Number(localStorage.getItem("lastPage") || "1");
+      if (pageNum > pdfDoc.numPages) pageNum = 1;
+
+      empty.hidden = true;
+      canvas.hidden = false;
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+
+      await renderPage(pageNum);
+    });
+
+    prevBtn.addEventListener("click", async () => {
+      if (!pdfDoc || pageNum <= 1) return;
+      pageNum--;
+      localStorage.setItem("lastPage", pageNum);
+      await renderPage(pageNum);
+    });
+
+    nextBtn.addEventListener("click", async () => {
+      if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
+      pageNum++;
+      localStorage.setItem("lastPage", pageNum);
+      await renderPage(pageNum);
+    });
+
+    window.addEventListener("resize", () => {
+      if (pdfDoc) renderPage(pageNum);
+    });
+  </script>
+</body>
+</html>
