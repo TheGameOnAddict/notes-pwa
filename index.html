@@ -737,77 +737,49 @@ body:not(.indexing):not(.searching) #viewControls{grid-template-columns:1fr 1fr 
 
 
 /* v39 Bookmarks */
-#bookmarkBtn{position:absolute;right:46px;top:50%;transform:translateY(-50%);font-size:21px}
-#topZoomBtn{right:6px}
-body.bookmarked #bookmarkBtn{color:rgb(255,214,10)}
+#topBookmarkBtn{position:absolute;right:48px;top:50%;transform:translateY(-50%);font-size:21px}
+#topbar{padding-right:88px !important}
+body.bookmarking #topBookmarkBtn,
+#topBookmarkBtn.saved{
+  background:rgba(255,214,10,.22);
+  color:#ffd60a;
+}
 #bookmarkPanel{
   display:none;
   margin-bottom:8px;
   border-radius:25px;
-  padding:8px;
-  max-height:35vh;
+  padding:10px;
+  max-height:38vh;
   overflow:auto;
 }
 body.bookmarking #bookmarkPanel{display:block}
-#bookmarkTopRow{
+#bookmarkHeader{
   display:grid;
   grid-template-columns:1fr 36px;
-  gap:7px;
+  gap:8px;
   align-items:center;
-  margin-bottom:7px;
+  margin-bottom:8px;
 }
-#addBookmarkBtn,#bookmarkCloseBtn{
-  border:0;
-  border-radius:17px;
-  height:36px;
-  background:rgba(255,255,255,.10);
-  color:var(--text);
-  font-size:13px;
-  font-weight:850;
+#bookmarkTitle{font-size:15px;font-weight:850;letter-spacing:-.02em}
+#bookmarkSub{margin-top:2px;color:var(--muted);font-size:11px;font-weight:700}
+#bookmarkCloseBtn{
+  border:0;border-radius:17px;background:rgba(255,255,255,.10);color:var(--text);
+  height:36px;font-size:20px;font-weight:900;
 }
-#bookmarkCloseBtn{font-size:20px}
+#bookmarkAddBtn{
+  width:100%;border:0;border-radius:17px;background:rgba(255,214,10,.18);color:var(--text);
+  padding:10px 12px;margin-bottom:8px;font-size:13px;font-weight:850;
+}
 .bookmarkRow{
-  width:100%;
-  border:0;
-  border-radius:16px;
-  background:rgba(255,255,255,.08);
-  color:var(--text);
-  text-align:left;
-  padding:9px 11px;
-  margin-bottom:6px;
-  font-size:13px;
-  font-weight:760;
+  width:100%;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:var(--text);
+  text-align:left;padding:9px 10px;margin-bottom:6px;display:grid;grid-template-columns:1fr 34px;gap:8px;align-items:center;
 }
-.bookmarkRow small{
-  display:block;
-  margin-top:2px;
-  color:var(--muted);
-  font-size:11px;
-  font-weight:700;
-}
+.bookmarkMain{min-width:0}
+.bookmarkName{font-size:13px;font-weight:820;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bookmarkMeta{color:var(--muted);font-size:11px;font-weight:700;margin-top:2px}
 .bookmarkDelete{
-  float:right;
-  border:0;
-  border-radius:999px;
-  background:rgba(255,255,255,.10);
-  color:var(--text);
-  width:25px;
-  height:25px;
-  font-size:14px;
-  font-weight:900;
+  border:0;width:34px;height:34px;border-radius:14px;background:rgba(255,255,255,.10);color:var(--text);font-size:16px;
 }
-body.bookmarking #bookmarksBtn{background:rgba(255,214,10,.20)}
-body.bookmarking #searchBtn,
-body.bookmarking #indexBtn,
-body.bookmarking #clearIndexBtn{display:none}
-body.bookmarking #viewControls{grid-template-columns:1fr}
-body.indexing #clearIndexBtn{display:block}
-#clearIndexBtn{display:none}
-body.indexing #searchBtn,
-body.indexing #bookmarksBtn{display:none}
-body.indexing #viewControls{grid-template-columns:1fr 1fr}
-body.searching #bookmarksBtn{display:none}
-body:not(.indexing):not(.searching):not(.bookmarking) #viewControls{grid-template-columns:1fr 1fr 1fr}
 
 </style>
 </head>
@@ -821,7 +793,7 @@ body:not(.indexing):not(.searching):not(.bookmarking) #viewControls{grid-templat
         <div id="titleSub">Open a PDF</div>
         <input id="pageJump" type="number" inputmode="numeric" min="1" placeholder="Page">
       </div>
-      <button id="bookmarkBtn" class="iconBtn" disabled aria-label="Bookmark">☆</button>
+      <button id="topBookmarkBtn" class="iconBtn" disabled aria-label="Bookmarks">☆</button>
       <button id="topZoomBtn" class="iconBtn" disabled aria-label="Zoom">🔍</button>
       <input id="file" type="file" accept="application/pdf">
     </div>
@@ -844,12 +816,17 @@ body:not(.indexing):not(.searching):not(.bookmarking) #viewControls{grid-templat
 
   <div id="bottomArea">
     <div id="bookmarkPanel" class="frost">
-      <div id="bookmarkTopRow">
-        <button id="addBookmarkBtn">Add Current Page</button>
+      <div id="bookmarkHeader">
+        <div>
+          <div id="bookmarkTitle">Bookmarks</div>
+          <div id="bookmarkSub">Saved spots in this PDF</div>
+        </div>
         <button id="bookmarkCloseBtn">×</button>
       </div>
+      <button id="bookmarkAddBtn">☆ Save current spot</button>
       <div id="bookmarkList"></div>
     </div>
+
     <div id="searchPanel" class="frost">
       <div id="searchTopRow">
         <input id="searchInput" type="search" placeholder="Search PDF">
@@ -903,7 +880,7 @@ body:not(.indexing):not(.searching):not(.bookmarking) #viewControls{grid-templat
       <div id="centerControls">
         <div id="viewControls">
           <button id="searchBtn" class="actionBtn" disabled>Search</button>
-          <button id="bookmarksBtn" class="actionBtn" disabled>Marks</button>
+          <button id="copyBtn" class="actionBtn" disabled>Copy</button>
           <button id="indexBtn" class="actionBtn" disabled>Index</button>
           <button id="clearIndexBtn" class="actionBtn" disabled>Clear</button>
         </div>
@@ -925,7 +902,7 @@ import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
-let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,refineMode=false,chaptersMode=false,zoomMode=false,copyMode=false,searchMode=false,bookmarkMode=false;
+let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,refineMode=false,chaptersMode=false,zoomMode=false,copyMode=false,searchMode=false;
 let shapesByPage={},start=null,current=null,swipeStart=null;
 let indexItemsByPage={}, activeIndex=null;
 let pinnedIndexes={}; // session only
@@ -954,7 +931,7 @@ function closePanels(except=''){
   if(except!=='zoom') { zoomMode=false; document.body.classList.remove('zooming'); }
   if(except!=='copy') { copyMode=false; document.body.classList.remove('copying'); clearCopyHighlightIfNeeded(); }
   if(except!=='search') { searchMode=false; document.body.classList.remove('searching'); }
-  if(except!=='bookmark') { bookmarkMode=false; document.body.classList.remove('bookmarking'); }
+  if(except!=='bookmark') { document.body.classList.remove('bookmarking'); }
 }
 function setEditMode(on){
   editMode=on;
@@ -1414,92 +1391,83 @@ async function copyCurrentSelection(){
 
 
 
-function bookmarkStorageKey(){return 'bookmarks_'+pdfKey}
 function loadBookmarks(){
   if(!pdfKey){bookmarks=[];return;}
-  try{bookmarks=JSON.parse(localStorage.getItem(bookmarkStorageKey())||'[]')}catch{bookmarks=[]}
-  updateBookmarkState();
-  renderBookmarks();
+  try{bookmarks=JSON.parse(localStorage.getItem('bookmarks_'+pdfKey)||'[]')||[];}
+  catch{bookmarks=[];}
 }
 function saveBookmarks(){
-  if(pdfKey)localStorage.setItem(bookmarkStorageKey(),JSON.stringify(bookmarks));
-  updateBookmarkState();
-  renderBookmarks();
+  if(pdfKey)localStorage.setItem('bookmarks_'+pdfKey,JSON.stringify(bookmarks));
 }
-function currentBookmarkIndex(){
-  return bookmarks.findIndex(b=>b.page===pageNum);
+function currentBookmark(){
+  return bookmarks.find(b=>b.page===pageNum);
 }
-function updateBookmarkState(){
-  const on=currentBookmarkIndex()>=0;
-  document.body.classList.toggle('bookmarked',on);
-  if(typeof bookmarkBtn!=='undefined') bookmarkBtn.textContent=on?'★':'☆';
+function updateBookmarkButton(){
+  if(!doc || typeof topBookmarkBtn==='undefined') return;
+  const saved=!!currentBookmark();
+  topBookmarkBtn.classList.toggle('saved',saved);
+  topBookmarkBtn.textContent=saved?'★':'☆';
+  if(typeof bookmarkAddBtn!=='undefined') bookmarkAddBtn.textContent=saved?'★ Remove bookmark for this spot':'☆ Save current spot';
 }
-function setBookmarkMode(on){
-  closePanels(on?'bookmark':'');
-  bookmarkMode=on;
-  document.body.classList.toggle('bookmarking',bookmarkMode);
-  if(bookmarkMode) renderBookmarks();
+function bookmarkLabelForCurrent(){
+  const chapter=(outlineItems||[]).filter(ch=>ch.page && ch.page<=pageNum).sort((a,b)=>b.page-a.page)[0];
+  if(chapter) return chapter.title;
+  return `Page ${pageNum}`;
 }
-function defaultBookmarkName(){
-  const chapter=outlineItems
-    .filter(ch=>ch.page && ch.page<=pageNum)
-    .sort((a,b)=>b.page-a.page)[0];
-  return chapter ? chapter.title : `Page ${pageNum}`;
-}
-function addOrRemoveBookmark(){
-  if(!doc)return;
-  const idx=currentBookmarkIndex();
-  if(idx>=0){
-    bookmarks.splice(idx,1);
-    saveBookmarks();
-    toast('Bookmark removed');
-    return;
+function toggleCurrentBookmark(){
+  if(!doc) return;
+  const existing=currentBookmark();
+  if(existing){
+    bookmarks=bookmarks.filter(b=>b.id!==existing.id);
+    saveBookmarks();renderBookmarks();updateBookmarkButton();toast('Bookmark removed');return;
   }
-  const name=prompt('Bookmark name', defaultBookmarkName());
-  if(name===null)return;
-  bookmarks.push({
-    id:Date.now(),
-    name:(name.trim()||`Page ${pageNum}`),
+  bookmarks.unshift({
+    id:String(Date.now())+'_'+Math.random().toString(16).slice(2),
     page:pageNum,
     zoom:zoomFactor,
     sx:viewer.scrollLeft||0,
     sy:viewer.scrollTop||0,
+    title:bookmarkLabelForCurrent(),
     created:new Date().toISOString()
   });
-  bookmarks.sort((a,b)=>a.page-b.page);
-  saveBookmarks();
-  toast('Bookmarked');
+  saveBookmarks();renderBookmarks();updateBookmarkButton();toast('Bookmark saved');
+}
+async function goToBookmark(id){
+  const b=bookmarks.find(x=>x.id===id);
+  if(!b) return;
+  pageNum=Math.max(1,Math.min(doc.numPages,b.page));
+  zoomFactor=Math.max(.75,Math.min(3,b.zoom||1));
+  updateZoomLabel();
+  document.body.classList.remove('bookmarking');
+  await renderPage(pageNum);
+  requestAnimationFrame(()=>{viewer.scrollLeft=b.sx||0;viewer.scrollTop=b.sy||0;});
+}
+function deleteBookmark(id,e){
+  if(e){e.stopPropagation();e.preventDefault();}
+  bookmarks=bookmarks.filter(b=>b.id!==id);
+  saveBookmarks();renderBookmarks();updateBookmarkButton();toast('Bookmark deleted');
 }
 function renderBookmarks(){
-  if(typeof bookmarkList==='undefined')return;
+  if(typeof bookmarkList==='undefined') return;
   bookmarkList.innerHTML='';
   if(!bookmarks.length){
-    bookmarkList.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;">No bookmarks yet.</div>';
+    bookmarkList.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No bookmarks yet.</div>';
     return;
   }
-  for(const b of bookmarks){
+  bookmarks.forEach(b=>{
     const row=document.createElement('button');
     row.className='bookmarkRow';
-    row.innerHTML=`<button class="bookmarkDelete" data-id="${b.id}">×</button>${b.name}<small>Page ${b.page} • ${Math.round((b.zoom||1)*100)}%</small>`;
-    row.onclick=(e)=>{
-      if(e.target.classList.contains('bookmarkDelete')){
-        e.stopPropagation();
-        bookmarks=bookmarks.filter(x=>String(x.id)!==String(e.target.dataset.id));
-        saveBookmarks();
-        toast('Bookmark deleted');
-        return;
-      }
-      pageNum=b.page;
-      zoomFactor=b.zoom||1;
-      setBookmarkMode(false);
-      renderPage(pageNum).then(()=>{
-        viewer.scrollLeft=b.sx||0;
-        viewer.scrollTop=b.sy||0;
-        updateBookmarkState();
-      });
-    };
+    row.innerHTML=`<div class="bookmarkMain"><div class="bookmarkName"></div><div class="bookmarkMeta">Page ${b.page} • ${Math.round((b.zoom||1)*100)}%</div></div><button class="bookmarkDelete">×</button>`;
+    row.querySelector('.bookmarkName').textContent=b.title||`Page ${b.page}`;
+    row.onclick=()=>goToBookmark(b.id);
+    row.querySelector('.bookmarkDelete').onclick=(e)=>deleteBookmark(b.id,e);
     bookmarkList.appendChild(row);
-  }
+  });
+}
+function setBookmarkMode(on){
+  closePanels(on?'bookmark':'');
+  document.body.classList.toggle('bookmarking',on);
+  if(on){renderBookmarks();updateBookmarkButton();}
 }
 
 function setSearchMode(on){
@@ -1633,10 +1601,9 @@ async function renderPage(n){
   if(copyMode){ moveCopySlidersToBody(); buildCopyLinesForPage(); }
   titleSub.textContent=`Page ${pageNum} of ${doc.numPages} • ${Math.round(zoomFactor*100)}%`;
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
-  updateBookmarkState();
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
-  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());rendering=false;
+  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();rendering=false;
   if(n===pageNum){viewer.scrollLeft=(zoomFactor>1.01?oldX:0); viewer.scrollTop=oldY;}
   savePlace();
 }
@@ -1651,16 +1618,15 @@ function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum)}}
 openBtn.onclick=()=>file.click();
 file.onchange=async()=>{
   const f=file.files[0];if(!f)return;
-  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();pinnedIndexes={};indexItemsByPage={};
+  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();loadBookmarks();pinnedIndexes={};indexItemsByPage={};
   doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
   const place=loadPlace();
   pageNum=Math.max(1,Math.min(doc.numPages,place?.page||1));
   zoomFactor=Math.max(.75,Math.min(3,place?.zoom||1));
   empty.hidden=true;stage.hidden=false;
-  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,searchBtn,bookmarksBtn,bookmarkBtn,topZoomBtn].forEach(b=>b.disabled=false);
+  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,searchBtn,topZoomBtn,topBookmarkBtn].forEach(b=>b.disabled=false);
   setTool('rect');setEditMode(false);setIndexMode(false);setZoomMode(false);setChaptersMode(false);
   await loadChapters();
-  loadBookmarks();
   updateZoomLabel();
   await renderPage(pageNum);
   if(place?.page){
@@ -1681,10 +1647,9 @@ zoomFit.onclick=()=>setZoom(1);
 idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
 
 
-bookmarksBtn.onclick=()=>setBookmarkMode(!bookmarkMode);
-bookmarkBtn.onclick=()=>addOrRemoveBookmark();
-addBookmarkBtn.onclick=()=>addOrRemoveBookmark();
+topBookmarkBtn.onclick=()=>setBookmarkMode(!document.body.classList.contains('bookmarking'));
 bookmarkCloseBtn.onclick=()=>setBookmarkMode(false);
+bookmarkAddBtn.onclick=()=>toggleCurrentBookmark();
 
 searchBtn.onclick=()=>setSearchMode(!searchMode);
 searchCloseBtn.onclick=()=>setSearchMode(false);
