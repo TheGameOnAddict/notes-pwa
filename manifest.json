@@ -1,9 +1,9 @@
 {
-  "name": "PDF Nav Test",
-  "short_name": "PDF Nav",
+  "name": "PDF Nav",
+  "short_name": "PDF",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#111827",
   "theme_color": "#111827",
+  "background_color": "#111827",
   "icons": []
 }

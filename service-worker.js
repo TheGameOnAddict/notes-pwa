@@ -1,15 +1,3 @@
-const CACHE_NAME = "pdf-nav-test-v1";
-const APP_FILES = ["./", "./index.html", "./manifest.json"];
-
-self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_FILES)));
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", event => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("fetch", event => {
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
-});
+const CACHE_NAME='pdf-nav-test-v2';
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(['./','index.html','manifest.json'])));self.skipWaiting();});
+self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
