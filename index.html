@@ -61,8 +61,8 @@ body.jumping #pageJump{display:block}
 #file{position:absolute;left:-9999px}
 
 #viewer{
-  flex:1 1 auto;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;
-  padding:3px 16px 10px;-webkit-overflow-scrolling:touch;
+  flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;justify-content:center;align-items:flex-start;
+  padding:3px 16px 10px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:none;
 }
 #stage{position:relative}
 canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px rgba(0,0,0,.24)}
@@ -283,6 +283,88 @@ body.copying #copyPanel{display:flex}
   background:#0a84ff;
   box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.3);
   top:0;
+  transform:translateX(-50%);
+  touch-action:none;
+}
+
+
+/* Copy utility v31: big external handles, not squeezed into the small panel */
+body.copying #copyPanel{padding:10px 10px 12px 10px}
+body.copying #copyLineSlider{
+  position:fixed;
+  z-index:35;
+  right:4px;
+  top:calc(env(safe-area-inset-top) + 82px);
+  bottom:calc(env(safe-area-inset-bottom) + 94px);
+  width:44px;
+  display:block;
+  touch-action:none;
+  pointer-events:auto;
+}
+body.copying #copyLineSlider::before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:20px;
+  width:4px;
+  border-radius:999px;
+  background:rgba(255,255,255,.22);
+}
+body.copying #copyLineFill{
+  position:absolute;
+  left:20px;
+  width:4px;
+  border-radius:999px;
+  background:rgba(10,132,255,.95);
+}
+body.copying .copyHandle{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:#0a84ff;
+  box-shadow:0 0 0 5px rgba(10,132,255,.18),0 5px 14px rgba(0,0,0,.35);
+  left:5px;
+  transform:translateY(-50%);
+  touch-action:none;
+}
+body.copying #copyCharSlider{
+  position:fixed;
+  z-index:35;
+  left:18px;
+  right:18px;
+  bottom:calc(env(safe-area-inset-bottom) + 58px);
+  height:38px;
+  display:block;
+  touch-action:none;
+  pointer-events:auto;
+}
+body.copying #copyCharSlider::before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:17px;
+  height:4px;
+  border-radius:999px;
+  background:rgba(255,255,255,.22);
+}
+body.copying #copyCharFill{
+  position:absolute;
+  top:17px;
+  height:4px;
+  border-radius:999px;
+  background:rgba(10,132,255,.95);
+}
+body.copying .charHandle{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:#0a84ff;
+  box-shadow:0 0 0 5px rgba(10,132,255,.18),0 5px 14px rgba(0,0,0,.35);
+  top:2px;
   transform:translateX(-50%);
   touch-action:none;
 }
@@ -642,6 +724,46 @@ function setZoom(z){
 
 
 
+
+async function getRobustPageLines(){
+  if(!doc) return [];
+  const key=pageKey();
+  if(pageLinesByPage[key] && pageLinesByPage[key].length) return pageLinesByPage[key];
+
+  const page=await doc.getPage(pageNum);
+  const content=await page.getTextContent();
+  const viewport=page.getViewport({scale:1});
+  const raw=[];
+  for(const item of content.items){
+    const str=(item.str||'').trim();
+    if(!str) continue;
+    const tx=item.transform || [1,0,0,1,0,0];
+    const x=tx[4]/viewport.width;
+    const y=1-(tx[5]/viewport.height);
+    const w=(item.width||Math.max(1,str.length*4))/viewport.width;
+    const h=Math.max(.008,(Math.abs(tx[3])||8)/viewport.height);
+    raw.push({str,x,y,w,h});
+  }
+  raw.sort((a,b)=>a.y-b.y || a.x-b.x);
+  const lines=[];
+  for(const r of raw){
+    let line=lines.find(l=>Math.abs(l.y-r.y)<0.008);
+    if(!line){line={y:r.y,items:[]};lines.push(line);}
+    line.items.push(r);
+  }
+  lines.forEach(l=>{
+    l.items.sort((a,b)=>a.x-b.x);
+    l.text=l.items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+    const minX=Math.min(...l.items.map(i=>i.x));
+    const maxX=Math.max(...l.items.map(i=>i.x+i.w));
+    const minY=Math.min(...l.items.map(i=>i.y-i.h*.9));
+    const maxY=Math.max(...l.items.map(i=>i.y+i.h*.35));
+    l.rects=[{x:Math.max(0,minX-.003),y:Math.max(0,minY),w:Math.min(.98,maxX-minX+.006),h:Math.max(.006,maxY-minY)}];
+  });
+  pageLinesByPage[key]=lines;
+  return lines;
+}
+
 function clearCopyHighlightIfNeeded(){
   if(!indexMode) clearTextHighlights();
   else renderTextHighlights();
@@ -653,8 +775,8 @@ function selectedCopyFullText(){
   const b=Math.max(0,Math.max(copyLineStart,copyLineEnd));
   return lines.slice(a,b+1).map(l=>l.text||'').join('\n');
 }
-function buildCopyLinesForPage(){
-  const lines=pageLinesByPage[pageKey()]||[];
+async function buildCopyLinesForPage(){
+  const lines=await getRobustPageLines();
   if(!lines.length){
     copyTextPreview.textContent='No text found on this page.';
     return;
@@ -802,9 +924,14 @@ async function renderPage(n){
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
   drawAll(false);renderTextHighlights();rendering=false;
-  if(n===pageNum){viewer.scrollLeft=oldX; viewer.scrollTop=oldY;}
+  if(n===pageNum){viewer.scrollLeft=0; viewer.scrollTop=oldY;}
   savePlace();
 }
+
+function lockHorizontalViewport(){
+  if(viewer) viewer.scrollLeft=0;
+}
+
 function goPrev(){if(pageNum>1){pageNum--;renderPage(pageNum)}}
 function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum)}}
 
@@ -896,7 +1023,7 @@ drawCanvas.addEventListener('pointerup',e=>{
     drawAll(false);
   }
 });
-viewer.addEventListener('scroll',()=>{if(doc) savePlace();});
+viewer.addEventListener('scroll',()=>{lockHorizontalViewport(); if(doc) savePlace();});
 let resizeTimer=null;addEventListener('resize',()=>{if(!doc)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>renderPage(pageNum),250)});
 </script>
 </body>
