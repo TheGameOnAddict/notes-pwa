@@ -61,8 +61,8 @@ body.jumping #pageJump{display:block}
 #file{position:absolute;left:-9999px}
 
 #viewer{
-  flex:1 1 auto;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;
-  padding:3px 16px 10px;-webkit-overflow-scrolling:touch;
+  flex:1 1 auto;min-height:0;overflow:hidden;display:flex;justify-content:center;align-items:flex-start;
+  padding:3px 16px 10px;overscroll-behavior:none;touch-action:pan-y;
 }
 #stage{position:relative}
 canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px rgba(0,0,0,.24)}
@@ -138,7 +138,7 @@ body.refining .indexChip{padding:7px 11px;font-size:12px}
 .indexChip.active{transform:scale(1.18);opacity:1;background:rgba(255,214,10,.30);box-shadow:inset 0 0 0 1px rgba(255,214,10,.75)}
 .indexChip.pinned::after{content:" •";color:rgb(255,214,10)}
 .panelBtn{border:0;border-radius:17px;width:36px;height:36px;background:rgba(255,255,255,.10);color:var(--text);font-size:18px;font-weight:900}
-#utilityBar{display:grid;grid-template-columns:42px 1fr 42px 42px;gap:8px;align-items:center}
+#utilityBar{display:grid;grid-template-columns:42px 42px 1fr 42px 42px;gap:8px;align-items:center}
 .circleNav{
   border:0;border-radius:50%;width:42px;height:42px;background:rgba(35,37,44,.82);color:var(--text);
   font-size:23px;font-weight:850;display:grid;place-items:center;
@@ -166,12 +166,12 @@ body.indexing #indexBtn, body.chapters #chaptersBtn, body.zooming #zoomToggleBtn
 }
 #toast.show{opacity:1}
 
-#topZoomBtn{position:absolute;right:6px;top:50%;transform:translateY(-50%)}
+#topZoomBtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:19px}
 body.indexing #clearIndexBtn{display:block}
 #clearIndexBtn{display:none}
-body.indexing #viewControls{grid-template-columns:1fr 1fr 1fr}
+body.indexing #copyBtn{display:none}
+body.indexing #viewControls{grid-template-columns:1fr 1fr}
 body:not(.indexing) #viewControls{grid-template-columns:1fr 1fr}
-#chaptersBtn{display:none}
 #textLayer{
   pointer-events:none !important;
   user-select:none !important;
@@ -182,7 +182,7 @@ body:not(.indexing) #viewControls{grid-template-columns:1fr 1fr}
   display:none;
   margin-bottom:8px;
   border-radius:25px;
-  padding:10px;
+  padding:10px 56px 34px 10px;
   gap:10px;
   align-items:center;
   position:relative;
@@ -190,8 +190,8 @@ body:not(.indexing) #viewControls{grid-template-columns:1fr 1fr}
 body.copying #copyPanel{display:flex}
 #copyTextPreview{
   flex:1;
-  min-height:38px;
-  max-height:72px;
+  min-height:42px;
+  max-height:86px;
   overflow:hidden;
   border-radius:17px;
   background:rgba(255,255,255,.08);
@@ -211,45 +211,75 @@ body.copying #copyPanel{display:flex}
   font-size:13px;
   font-weight:850;
 }
-#copyControls{
+#copyLineSlider{
+  position:absolute;
+  right:18px;
+  top:12px;
+  bottom:32px;
+  width:24px;
   display:none;
-  position:absolute;
-  inset:0;
-  pointer-events:none;
+  touch-action:none;
 }
-body.copying #copyControls{display:block}
-.copyGuide{
+body.copying #copyLineSlider{display:block}
+#copyLineSlider::before{
+  content:"";
   position:absolute;
-  background:rgba(10,132,255,.9);
+  top:0;bottom:0;left:10px;width:4px;
   border-radius:999px;
-  box-shadow:0 0 0 3px rgba(10,132,255,.16);
-  pointer-events:none;
+  background:rgba(255,255,255,.18);
 }
-#lineStartGuide,.lineEndGuide{right:6px;width:4px;height:18px}
-#charStartGuide,#charEndGuide{bottom:4px;width:18px;height:4px}
-#copyLineRange{
-  position:fixed;
-  z-index:30;
-  right:-78px;
-  top:24vh;
-  width:210px;
-  transform:rotate(90deg);
-  accent-color:#0a84ff;
+#copyLineFill{
+  position:absolute;
+  left:10px;width:4px;
+  border-radius:999px;
+  background:rgba(10,132,255,.9);
+}
+.copyHandle{
+  position:absolute;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:#0a84ff;
+  box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.3);
+  left:0;
+  transform:translateY(-50%);
+  touch-action:none;
+}
+#copyCharSlider{
+  position:absolute;
+  left:18px;
+  right:70px;
+  bottom:12px;
+  height:24px;
   display:none;
+  touch-action:none;
 }
-#copyCharStart,#copyCharEnd{
-  position:fixed;
-  z-index:30;
-  left:8vw;
-  width:84vw;
-  accent-color:#0a84ff;
-  display:none;
+body.copying #copyCharSlider{display:block}
+#copyCharSlider::before{
+  content:"";
+  position:absolute;
+  left:0;right:0;top:10px;height:4px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
 }
-#copyCharStart{bottom:calc(env(safe-area-inset-bottom) + 86px)}
-#copyCharEnd{bottom:calc(env(safe-area-inset-bottom) + 58px)}
-body.copying #copyLineRange,
-body.copying #copyCharStart,
-body.copying #copyCharEnd{display:block}
+#copyCharFill{
+  position:absolute;
+  top:10px;
+  height:4px;
+  border-radius:999px;
+  background:rgba(10,132,255,.9);
+}
+.charHandle{
+  position:absolute;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:#0a84ff;
+  box-shadow:0 0 0 4px rgba(10,132,255,.18),0 4px 12px rgba(0,0,0,.3);
+  top:0;
+  transform:translateX(-50%);
+  touch-action:none;
+}
 
 </style>
 </head>
@@ -263,7 +293,7 @@ body.copying #copyCharEnd{display:block}
         <div id="titleSub">Open a PDF</div>
         <input id="pageJump" type="number" inputmode="numeric" min="1" placeholder="Page">
       </div>
-      <button id="topZoomBtn" class="iconBtn" disabled aria-label="Zoom">⌕</button>
+      <button id="topZoomBtn" class="iconBtn" disabled aria-label="Zoom">🔍</button>
       <input id="file" type="file" accept="application/pdf">
     </div>
   </div>
@@ -284,13 +314,19 @@ body.copying #copyCharEnd{display:block}
 
   <div id="bottomArea">
     <div id="copyPanel" class="frost">
-      <div id="copyTextPreview">Use the side handle to choose lines, then bottom handles to trim characters.</div>
+      <div id="copyTextPreview">Use the side handles to choose start/end lines. Use the bottom handles to trim characters.</div>
       <button id="copyDoBtn">Copy</button>
+      <div id="copyLineSlider">
+        <div id="copyLineFill"></div>
+        <div id="lineStartHandle" class="copyHandle"></div>
+        <div id="lineEndHandle" class="copyHandle"></div>
+      </div>
+      <div id="copyCharSlider">
+        <div id="copyCharFill"></div>
+        <div id="charStartHandle" class="charHandle"></div>
+        <div id="charEndHandle" class="charHandle"></div>
+      </div>
     </div>
-
-    <input id="copyLineRange" type="range" min="0" max="0" value="0">
-    <input id="copyCharStart" type="range" min="0" max="0" value="0">
-    <input id="copyCharEnd" type="range" min="0" max="0" value="0">
 
     <div id="chapterPanel" class="frost"></div>
 
@@ -315,6 +351,7 @@ body.copying #copyCharEnd{display:block}
 
     <div id="utilityBar">
       <button id="prev" class="circleNav" disabled>‹</button>
+      <button id="chaptersBtn" class="circleNav" disabled aria-label="Chapters">📖</button>
       <div id="centerControls">
         <div id="viewControls">
           <button id="copyBtn" class="actionBtn" disabled>Copy</button>
@@ -345,7 +382,7 @@ let indexItemsByPage={}, activeIndex=null;
 let pinnedIndexes={}; // session only
 let outlineItems=[];
 let pageLinesByPage={};
-let copyLineIndex=0, copyLineCount=1, copyCharStartVal=0, copyCharEndVal=0;
+let copyLineStart=0, copyLineEnd=0, copyCharStartVal=0, copyCharEndVal=0;
 let zoomFactor=1; // 1 = fit width
 
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
@@ -443,21 +480,7 @@ function commitPageJump(){
 pageJump.addEventListener('keydown',e=>{if(e.key==='Enter')commitPageJump(); if(e.key==='Escape')document.body.classList.remove('jumping')});
 pageJump.addEventListener('blur',()=>{if(document.body.classList.contains('jumping'))commitPageJump()});
 
-let topSwipeStart=null;
-topbar.addEventListener('pointerdown',e=>{
-  if(!doc) return;
-  topSwipeStart={x:e.clientX,y:e.clientY,t:Date.now()};
-},{passive:true});
-topbar.addEventListener('pointerup',e=>{
-  if(!doc || !topSwipeStart) return;
-  const dy=e.clientY-topSwipeStart.y;
-  const dx=e.clientX-topSwipeStart.x;
-  const dt=Date.now()-topSwipeStart.t;
-  topSwipeStart=null;
-  if(dy>28 && Math.abs(dy)>Math.abs(dx)*1.2 && dt<700){
-    setChaptersMode(!chaptersMode);
-  }
-},{passive:true});
+// Top bar swipe removed; chapter button is now the book icon.
 
 
 async function pageFromDest(dest){
@@ -550,61 +573,143 @@ function lineGroups(chunks){
   return lines;
 }
 
+function lineTextRange(){
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return '';
+  const a=Math.max(0,Math.min(copyLineStart,copyLineEnd));
+  const b=Math.max(0,Math.max(copyLineStart,copyLineEnd));
+  const text=lines.slice(a,b+1).map(l=>l.text||'').join('
+');
+  const len=text.length;
+  copyCharStartVal=Math.max(0,Math.min(copyCharStartVal,len));
+  copyCharEndVal=Math.max(copyCharStartVal,Math.min(copyCharEndVal||len,len));
+  return text;
+}
 function buildCopyLinesForPage(){
   const lines=pageLinesByPage[pageKey()]||[];
   if(!lines.length){
     copyTextPreview.textContent='No text found on this page.';
     return;
   }
-  copyLineRange.max=Math.max(0,lines.length-1);
-  copyLineRange.value=Math.min(copyLineIndex,lines.length-1);
-  copyLineCount=1;
+  copyLineStart=Math.min(copyLineStart,lines.length-1);
+  copyLineEnd=Math.max(copyLineStart,Math.min(copyLineEnd||copyLineStart,lines.length-1));
+  const text=lines.slice(copyLineStart,copyLineEnd+1).map(l=>l.text||'').join('
+');
+  copyCharStartVal=0;
+  copyCharEndVal=text.length;
   updateCopyPreview();
+}
+function updateSliderVisuals(){
+  const lines=pageLinesByPage[pageKey()]||[];
+  const maxLine=Math.max(1,lines.length-1);
+  const a=Math.min(copyLineStart,copyLineEnd)/maxLine;
+  const b=Math.max(copyLineStart,copyLineEnd)/maxLine;
+  lineStartHandle.style.top=(a*100)+'%';
+  lineEndHandle.style.top=(b*100)+'%';
+  copyLineFill.style.top=(a*100)+'%';
+  copyLineFill.style.height=((b-a)*100)+'%';
+
+  const text=lines.slice(Math.min(copyLineStart,copyLineEnd),Math.max(copyLineStart,copyLineEnd)+1).map(l=>l.text||'').join('
+');
+  const len=Math.max(1,text.length);
+  const ca=copyCharStartVal/len;
+  const cb=copyCharEndVal/len;
+  charStartHandle.style.left=(ca*100)+'%';
+  charEndHandle.style.left=(cb*100)+'%';
+  copyCharFill.style.left=(ca*100)+'%';
+  copyCharFill.style.width=((cb-ca)*100)+'%';
 }
 function updateCopyPreview(){
   const lines=pageLinesByPage[pageKey()]||[];
   if(!lines.length) return;
-  copyLineIndex=Math.max(0,Math.min(lines.length-1,Number(copyLineRange.value||0)));
-  const line=lines[copyLineIndex];
-  const text=line.text||'';
-  copyCharStart.max=Math.max(0,text.length);
-  copyCharEnd.max=Math.max(0,text.length);
-  if(Number(copyCharEnd.value)===0 || Number(copyCharEnd.value)>text.length) copyCharEnd.value=text.length;
-  copyCharStartVal=Math.min(Number(copyCharStart.value||0), text.length);
-  copyCharEndVal=Math.max(copyCharStartVal, Math.min(Number(copyCharEnd.value||text.length), text.length));
-  copyCharStart.value=copyCharStartVal;
-  copyCharEnd.value=copyCharEndVal;
-  copyTextPreview.textContent=text.slice(copyCharStartVal,copyCharEndVal)||text||'Blank line';
-  renderCopyHighlight(line, copyCharStartVal, copyCharEndVal);
+  const full=lines.slice(Math.min(copyLineStart,copyLineEnd),Math.max(copyLineStart,copyLineEnd)+1).map(l=>l.text||'').join('
+');
+  const len=full.length;
+  copyCharStartVal=Math.max(0,Math.min(copyCharStartVal,len));
+  copyCharEndVal=Math.max(copyCharStartVal,Math.min(copyCharEndVal||len,len));
+  const selected=full.slice(copyCharStartVal,copyCharEndVal);
+  copyTextPreview.textContent=selected || full || 'Blank line';
+  renderCopyHighlight();
+  updateSliderVisuals();
 }
-function renderCopyHighlight(line,startChar,endChar){
-  if(!copyMode || !line) return;
+function renderCopyHighlight(){
+  if(!copyMode) return;
   clearTextHighlights();
-  const W=drawCanvas.clientWidth,H=drawCanvas.clientHeight;
-  const rect=line.rects?.[0];
-  if(!rect) return;
-  const text=line.text||'';
-  const len=Math.max(1,text.length);
-  const sx=startChar/len, ex=endChar/len;
-  textHi.appendChild(makeHiDiv({
-    x:rect.x+rect.w*sx,
-    y:rect.y,
-    w:Math.max(.005,rect.w*(ex-sx)),
-    h:rect.h
-  }, true));
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return;
+  const a=Math.min(copyLineStart,copyLineEnd);
+  const b=Math.max(copyLineStart,copyLineEnd);
+  const selectedLines=lines.slice(a,b+1);
+  let offset=0;
+  const full=selectedLines.map(l=>l.text||'').join('
+');
+  const start=copyCharStartVal;
+  const end=copyCharEndVal || full.length;
+  selectedLines.forEach((line,i)=>{
+    const text=line.text||'';
+    const lineStart=offset;
+    const lineEnd=offset+text.length;
+    const overlapStart=Math.max(start,lineStart);
+    const overlapEnd=Math.min(end,lineEnd);
+    if(overlapEnd>overlapStart){
+      const rect=line.rects?.[0];
+      if(rect){
+        const localStart=(overlapStart-lineStart)/Math.max(1,text.length);
+        const localEnd=(overlapEnd-lineStart)/Math.max(1,text.length);
+        textHi.appendChild(makeHiDiv({
+          x:rect.x+rect.w*localStart,
+          y:rect.y,
+          w:Math.max(.005,rect.w*(localEnd-localStart)),
+          h:rect.h
+        },true));
+      }
+    }
+    offset += text.length + 1;
+  });
+}
+function setLineFromSlider(clientY, which){
+  const lines=pageLinesByPage[pageKey()]||[];
+  if(!lines.length) return;
+  const r=copyLineSlider.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(clientY-r.top)/Math.max(1,r.height)));
+  const val=Math.round(pct*(lines.length-1));
+  if(which==='start') copyLineStart=Math.min(val,copyLineEnd);
+  else copyLineEnd=Math.max(val,copyLineStart);
+  copyCharStartVal=0;
+  copyCharEndVal=lines.slice(copyLineStart,copyLineEnd+1).map(l=>l.text||'').join('
+').length;
+  updateCopyPreview();
+}
+function setCharFromSlider(clientX, which){
+  const full=lineTextRange();
+  const r=copyCharSlider.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(clientX-r.left)/Math.max(1,r.width)));
+  const val=Math.round(pct*full.length);
+  if(which==='start') copyCharStartVal=Math.min(val,copyCharEndVal);
+  else copyCharEndVal=Math.max(val,copyCharStartVal);
+  updateCopyPreview();
+}
+function dragHandle(el, moveFn){
+  el.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    moveFn(e);
+    const move=ev=>moveFn(ev);
+    const up=ev=>{
+      el.releasePointerCapture(e.pointerId);
+      el.removeEventListener('pointermove',move);
+      el.removeEventListener('pointerup',up);
+    };
+    el.addEventListener('pointermove',move);
+    el.addEventListener('pointerup',up);
+  });
 }
 async function copyCurrentSelection(){
-  const lines=pageLinesByPage[pageKey()]||[];
-  const line=lines[copyLineIndex];
-  if(!line){toast('Nothing to copy');return;}
-  const text=(line.text||'').slice(copyCharStartVal,copyCharEndVal);
-  try{
-    await navigator.clipboard.writeText(text);
-    toast('Copied');
-  }catch{
-    const ta=document.createElement('textarea');
-    ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Copied');
-  }
+  const full=lineTextRange();
+  const text=full.slice(copyCharStartVal,copyCharEndVal);
+  if(!text){toast('Nothing to copy');return;}
+  try{await navigator.clipboard.writeText(text);toast('Copied');}
+  catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Copied');}
 }
 
 async function scanIndexesForPage(){
@@ -712,7 +817,7 @@ file.onchange=async()=>{
   pageNum=Math.max(1,Math.min(doc.numPages,place?.page||1));
   zoomFactor=Math.max(.75,Math.min(3,place?.zoom||1));
   empty.hidden=true;stage.hidden=false;
-  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,copyBtn,topZoomBtn].forEach(b=>b.disabled=false);
+  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,copyBtn,topZoomBtn,chaptersBtn].forEach(b=>b.disabled=false);
   setTool('rect');setEditMode(false);setIndexMode(false);setZoomMode(false);setChaptersMode(false);
   await loadChapters();
   updateZoomLabel();
@@ -724,11 +829,13 @@ rectTool.onclick=()=>setTool('rect');circleTool.onclick=()=>setTool('circle');er
 indexBtn.onclick=()=>setIndexMode(!indexMode);
 clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];activeIndex=null;renderIndexCarousel();renderTextHighlights();toast('Page highlights cleared')};
 topZoomBtn.onclick=()=>setZoomMode(!zoomMode);
+chaptersBtn.onclick=()=>setChaptersMode(!chaptersMode);
 copyBtn.onclick=()=>setCopyMode(!copyMode);
-copyLineRange.oninput=()=>updateCopyPreview();
-copyCharStart.oninput=()=>updateCopyPreview();
-copyCharEnd.oninput=()=>updateCopyPreview();
 copyDoBtn.onclick=()=>copyCurrentSelection();
+dragHandle(lineStartHandle,e=>setLineFromSlider(e.clientY,'start'));
+dragHandle(lineEndHandle,e=>setLineFromSlider(e.clientY,'end'));
+dragHandle(charStartHandle,e=>setCharFromSlider(e.clientX,'start'));
+dragHandle(charEndHandle,e=>setCharFromSlider(e.clientX,'end'));
 zoomOut.onclick=()=>setZoom(zoomFactor-.25);
 zoomIn.onclick=()=>setZoom(zoomFactor+.25);
 zoomFit.onclick=()=>setZoom(1);

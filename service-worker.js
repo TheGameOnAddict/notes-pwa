@@ -1,4 +1,4 @@
-const CACHE_NAME='ipseer-night-final-ui-copy-v1';
+const CACHE_NAME='ipseer-polish-copy-chapters-v1';
 const APP_FILES=['./','index.html','manifest.json'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(APP_FILES)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
