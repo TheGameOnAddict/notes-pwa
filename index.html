@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#111827">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>PDF Markup</title>
 <style>
 :root{
   color-scheme:dark;
+  --bg:#111827;
   --text:#f5f5f7;
   --muted:rgba(245,245,247,.68);
   --panel:rgba(42,44,52,.90);
@@ -22,19 +21,27 @@ html,body{
   margin:0;
   width:100%;
   height:100%;
+  background:var(--bg);
   overflow:hidden;
-  background:#111827;
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;
 }
 body{
-  display:flex;
-  flex-direction:column;
   background:
     radial-gradient(circle at 15% 0%, rgba(10,132,255,.18), transparent 34%),
     radial-gradient(circle at 86% 12%, rgba(191,90,242,.14), transparent 32%),
     linear-gradient(145deg,#12141a,#1c1f27 55%,#202633);
 }
+
+/* This is intentionally built like the old working version:
+   normal document flow, no fixed bottom math, no safe-area bottom padding. */
+#app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
 .frost{
   background:var(--panel);
   backdrop-filter:blur(34px) saturate(1.9);
@@ -43,12 +50,6 @@ body{
   box-shadow:0 18px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.14);
 }
 
-/* OLD RELIABLE STRUCTURE:
-   top bar = normal flow
-   viewer = flexes
-   bottom bar = normal flow
-   nothing is absolute-positioned at the bottom
-*/
 #topArea{
   flex:0 0 auto;
   padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;
@@ -62,7 +63,12 @@ body{
   justify-content:center;
   position:relative;
 }
-#openBtn{position:absolute;left:8px;top:50%;transform:translateY(-50%)}
+#openBtn{
+  position:absolute;
+  left:8px;
+  top:50%;
+  transform:translateY(-50%);
+}
 .iconBtn{
   border:0;
   border-radius:21px;
@@ -108,7 +114,7 @@ body{
   display:flex;
   justify-content:center;
   align-items:flex-start;
-  padding:8px 12px 12px;
+  padding:8px 12px 10px;
   -webkit-overflow-scrolling:touch;
 }
 #stage{position:relative}
@@ -141,8 +147,7 @@ canvas{
 
 #bottomArea{
   flex:0 0 auto;
-  padding:8px 12px calc(env(safe-area-inset-bottom) + 8px);
-  background:transparent;
+  padding:8px 12px 6px; /* no env(safe-area-inset-bottom): old behavior */
 }
 #utilityBar{
   border-radius:28px;
@@ -187,7 +192,7 @@ body.editing #editBtn{
   z-index:20;
   left:50%;
   transform:translateX(-50%);
-  bottom:calc(env(safe-area-inset-bottom) + 84px);
+  bottom:84px;
   padding:9px 13px;
   border-radius:999px;
   background:rgba(20,20,30,.82);
@@ -202,6 +207,7 @@ body.editing #editBtn{
 </style>
 </head>
 <body>
+<div id="app">
   <div id="topArea">
     <div id="topbar" class="frost">
       <button id="openBtn" class="iconBtn" aria-label="Open PDF">📁</button>
@@ -241,8 +247,8 @@ body.editing #editBtn{
       <button id="editBtn" class="iconBtn" disabled aria-label="Edit">✎</button>
     </div>
   </div>
-
-  <div id="toast">Edit mode</div>
+</div>
+<div id="toast">Edit mode</div>
 
 <script type="module">
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs';
@@ -287,14 +293,7 @@ openBtn.onclick=()=>file.click();
 file.onchange=async()=>{const f=file.files[0];if(!f)return;pdfKey=f.name;titleMain.textContent=f.name;loadShapes();doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pageNum=1;empty.hidden=true;stage.hidden=false;[prev,next,rectTool,circleTool,eraseTool,editBtn].forEach(b=>b.disabled=false);setTool('rect');setEditMode(false);await renderPage(pageNum);};
 prev.onclick=goPrev; next.onclick=goNext; editBtn.onclick=()=>setEditMode(!editMode); rectTool.onclick=()=>setTool('rect'); circleTool.onclick=()=>setTool('circle'); eraseTool.onclick=()=>setTool('erase');
 
-drawCanvas.addEventListener('pointerdown',e=>{
-  if(!doc)return;
-  drawCanvas.setPointerCapture(e.pointerId);
-  const p=pos(e);
-  if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}
-  if(tool==='erase'){eraseAt(p);start=null;return;}
-  start=p;current=start;
-});
+drawCanvas.addEventListener('pointerdown',e=>{if(!doc)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}if(tool==='erase'){eraseAt(p);start=null;return;}start=p;current=start;});
 drawCanvas.addEventListener('pointermove',e=>{if(editMode&&start&&tool!=='erase'){current=pos(e);drawAll(true);}});
 drawCanvas.addEventListener('pointerup',e=>{
   if(!doc)return;
