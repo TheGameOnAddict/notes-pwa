@@ -3,7 +3,7 @@
   "short_name": "PDF Markup",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#e8edf7",
-  "theme_color": "#e8edf7",
+  "background_color": "#1c1f27",
+  "theme_color": "#1c1f27",
   "icons": []
 }

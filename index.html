@@ -4,52 +4,57 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#e8edf7">
+<meta name="theme-color" content="#1c1f27">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>PDF Markup</title>
 <style>
 :root{
-  color-scheme:light;
-  --text:#101014;
-  --muted:rgba(20,20,30,.58);
-  --blue:#007aff;
-  --red:#ff3b30;
-  --panel:rgba(246,248,252,.82);
-  --panel2:rgba(255,255,255,.72);
-  --button:rgba(255,255,255,.86);
-  --stroke:rgba(255,255,255,.78);
-  --line:rgba(80,90,120,.17);
-  --shadow:0 18px 48px rgba(31,41,55,.20);
-  --canvasBg:#dce3ee;
+  color-scheme:light dark;
+  --text:#f5f5f7;
+  --muted:rgba(245,245,247,.68);
+  --blue:#0a84ff;
+  --red:#ff453a;
+  --panel:rgba(42,44,52,.88);
+  --button:rgba(255,255,255,.14);
+  --stroke:rgba(255,255,255,.18);
+  --canvasBg:#1c1f27;
+  --shadow:0 18px 50px rgba(0,0,0,.38);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
+html,body{height:100%;margin:0;background:var(--canvasBg);overflow:hidden}
 body{
-  margin:0;
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;
+}
+#app{
+  height:100dvh;
+  min-height:100vh;
+  position:relative;
   overflow:hidden;
   background:
-    radial-gradient(circle at 12% 4%, rgba(0,122,255,.18), transparent 34%),
-    radial-gradient(circle at 88% 10%, rgba(191,90,242,.15), transparent 32%),
-    linear-gradient(145deg,#f7f9fd,#e8edf7 54%,#dbe7f5);
+    radial-gradient(circle at 15% 0%, rgba(10,132,255,.18), transparent 34%),
+    radial-gradient(circle at 86% 12%, rgba(191,90,242,.14), transparent 32%),
+    linear-gradient(145deg,#12141a,#1c1f27 55%,#202633);
 }
-#app{height:100vh;display:flex;flex-direction:column;position:relative}
 .frost{
   background:var(--panel);
   backdrop-filter:blur(34px) saturate(1.9);
   -webkit-backdrop-filter:blur(34px) saturate(1.9);
   border:1px solid var(--stroke);
-  box-shadow:var(--shadow), inset 0 1px rgba(255,255,255,.82);
+  box-shadow:var(--shadow), inset 0 1px rgba(255,255,255,.14);
 }
 #topbar{
   position:absolute;
   z-index:5;
   left:12px;
   right:12px;
-  top:calc(9px + env(safe-area-inset-top));
+  top:calc(max(10px,var(--safe-top)) + 2px);
   border-radius:30px;
   padding:12px 16px 10px;
-  min-height:74px;
+  min-height:72px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -70,29 +75,27 @@ body{
   max-width:190px;
   border-radius:999px;
   padding:4px 10px;
-  background:rgba(255,255,255,.64);
-  color:rgba(20,20,30,.68);
+  background:rgba(255,255,255,.10);
+  color:var(--muted);
   font-size:12px;
   line-height:14px;
   font-weight:800;
-  letter-spacing:-.01em;
-  box-shadow:inset 0 1px rgba(255,255,255,.9);
 }
 #viewer{
-  flex:1;
+  position:absolute;
+  inset:0;
   overflow:auto;
   display:flex;
   justify-content:center;
   align-items:flex-start;
-  background:var(--canvasBg);
-  padding:calc(98px + env(safe-area-inset-top)) 10px calc(106px + env(safe-area-inset-bottom));
+  padding:calc(100px + max(10px,var(--safe-top))) 10px calc(124px + max(18px,var(--safe-bottom))) 10px;
 }
 #stage{position:relative}
 canvas{
   display:block;
   background:#fff;
   border-radius:16px;
-  box-shadow:0 24px 64px rgba(0,0,0,.23);
+  box-shadow:0 24px 64px rgba(0,0,0,.25);
 }
 #draw{position:absolute;left:0;top:0;background:transparent;touch-action:none}
 #empty{
@@ -107,8 +110,7 @@ canvas{
   border-radius:24px;
   display:grid;place-items:center;
   font-size:30px;
-  background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(255,255,255,.62));
-  box-shadow:inset 0 1px rgba(255,255,255,.95),0 12px 28px rgba(0,122,255,.12);
+  background:rgba(255,255,255,.12);
 }
 #empty h1{font-size:25px;margin:0 0 8px;letter-spacing:-.03em}
 #empty p{margin:0;color:var(--muted);line-height:1.35;font-size:15px;font-weight:560}
@@ -118,7 +120,7 @@ canvas{
   z-index:6;
   left:18px;
   right:18px;
-  bottom:calc(12px + env(safe-area-inset-bottom));
+  bottom:calc(max(18px,var(--safe-bottom)) + 6px);
   border-radius:30px;
   padding:8px;
   display:grid;
@@ -137,20 +139,19 @@ canvas{
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow:inset 0 1px rgba(255,255,255,.95),0 5px 14px rgba(0,0,0,.08);
+  box-shadow:inset 0 1px rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.20);
 }
 .iconBtn:disabled{opacity:.35}
-.iconBtn.danger{color:var(--red)}
 #centerControls{
   min-width:0;
   height:50px;
   border-radius:22px;
-  background:rgba(255,255,255,.52);
+  background:rgba(255,255,255,.08);
   padding:4px;
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:4px;
-  box-shadow:inset 0 1px 4px rgba(0,0,0,.08);
+  box-shadow:inset 0 1px 4px rgba(0,0,0,.18);
 }
 .actionBtn{
   border:0;
@@ -161,24 +162,20 @@ canvas{
   font-weight:850;
 }
 .actionBtn.active{
-  background:rgba(255,255,255,.90);
-  box-shadow:0 7px 18px rgba(0,0,0,.10), inset 0 1px rgba(255,255,255,.95);
+  background:rgba(255,255,255,.18);
+  box-shadow:0 7px 18px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.18);
 }
 #viewControls{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 #editControls{display:none;grid-template-columns:1fr 1fr;gap:4px}
 body.editing #viewControls{display:none}
 body.editing #editControls{display:grid}
-body.editing #editBtn{
-  background:linear-gradient(180deg,rgba(0,122,255,.94),rgba(0,102,220,.94));
-  color:white;
-}
-body.editing #draw{cursor:crosshair}
+body.editing #editBtn{background:linear-gradient(180deg,rgba(10,132,255,.95),rgba(0,102,220,.95));color:white}
 #toast{
   position:absolute;
   z-index:20;
   left:50%;
   transform:translateX(-50%);
-  bottom:calc(90px + env(safe-area-inset-bottom));
+  bottom:calc(98px + max(22px,var(--safe-bottom)));
   padding:9px 13px;
   border-radius:999px;
   background:rgba(20,20,30,.82);
@@ -190,31 +187,6 @@ body.editing #draw{cursor:crosshair}
   pointer-events:none;
 }
 #toast.show{opacity:1}
-@media (prefers-color-scheme:dark){
-  :root{
-    color-scheme:dark;
-    --text:#f5f5f7;
-    --muted:rgba(245,245,247,.62);
-    --blue:#0a84ff;
-    --red:#ff453a;
-    --panel:rgba(28,28,32,.82);
-    --panel2:rgba(36,36,40,.75);
-    --button:rgba(255,255,255,.12);
-    --stroke:rgba(255,255,255,.16);
-    --line:rgba(255,255,255,.12);
-    --canvasBg:#1c1f27;
-  }
-  body{
-    background:
-      radial-gradient(circle at 15% 2%, rgba(10,132,255,.24), transparent 35%),
-      radial-gradient(circle at 86% 10%, rgba(191,90,242,.17), transparent 33%),
-      linear-gradient(145deg,#050509,#111827 58%,#1f2937);
-  }
-  .frost{box-shadow:0 18px 50px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.14)}
-  #titleSub,#centerControls{background:rgba(255,255,255,.09);color:rgba(245,245,247,.72)}
-  .iconBtn{box-shadow:inset 0 1px rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.18)}
-  .actionBtn.active{background:rgba(255,255,255,.18);box-shadow:0 7px 18px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.18)}
-}
 </style>
 </head>
 <body>
@@ -240,7 +212,6 @@ body.editing #draw{cursor:crosshair}
 
   <div id="utilityBar" class="frost">
     <button id="openBtn" class="iconBtn" aria-label="Open PDF">📁</button>
-
     <div id="centerControls">
       <div id="viewControls">
         <button id="prev" class="actionBtn" disabled>‹ Prev</button>
@@ -251,207 +222,59 @@ body.editing #draw{cursor:crosshair}
         <button id="circleTool" class="actionBtn" disabled>Circle</button>
       </div>
     </div>
-
     <button id="editBtn" class="iconBtn" disabled aria-label="Edit">✎</button>
     <input id="file" type="file" accept="application/pdf">
   </div>
-
   <div id="toast">Edit mode</div>
 </div>
 
 <script type="module">
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
-
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
 let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false;
-let shapesByPage={},start=null,current=null;
-let swipeStart=null;
-
+let shapesByPage={},start=null,current=null,swipeStart=null;
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
 const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
 
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.classList.add('show');
-  clearTimeout(t._timer);
-  t._timer=setTimeout(()=>t.classList.remove('show'),900);
-}
-function saveShapes(){ if(pdfKey) localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage)); }
-function loadShapes(){ shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}'); }
-function pageKey(){ return String(pageNum); }
-function currentShapes(){ if(!shapesByPage[pageKey()]) shapesByPage[pageKey()]=[]; return shapesByPage[pageKey()]; }
-
-function setEditMode(on){
-  editMode=on;
-  document.body.classList.toggle('editing',editMode);
-  editBtn.textContent=editMode?'✓':'✎';
-  drawCanvas.style.pointerEvents=editMode?'auto':'auto';
-  toast(editMode?'Edit mode':'View mode');
-}
-function setTool(t){
-  tool=t;
-  rectTool.classList.toggle('active',t==='rect');
-  circleTool.classList.toggle('active',t==='circle');
-}
-function pos(e){
-  const r=drawCanvas.getBoundingClientRect();
-  return {x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};
-}
-function makeShape(a,b,type){
-  return {type,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};
-}
-function drawShape(s){
-  const w0=drawCanvas.clientWidth,h0=drawCanvas.clientHeight;
-  const x=s.x*w0,y=s.y*h0,w=s.w*w0,h=s.h*h0;
-  if(s.type==='rect'){
-    drawCtx.beginPath(); drawCtx.roundRect(x,y,w,h,7); drawCtx.fill(); drawCtx.stroke();
-  }else{
-    drawCtx.beginPath(); drawCtx.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,Math.PI*2); drawCtx.fill(); drawCtx.stroke();
-  }
-}
-function drawAll(preview=false){
-  drawCtx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
-  const scale=drawCanvas.width/drawCanvas.clientWidth;
-  drawCtx.save();
-  drawCtx.scale(scale,scale);
-  drawCtx.lineWidth=3;
-  drawCtx.strokeStyle='#ff3b30';
-  drawCtx.fillStyle='rgba(255,59,48,.13)';
-  currentShapes().forEach(drawShape);
-  if(preview&&start&&current) drawShape(makeShape(start,current,tool));
-  drawCtx.restore();
-}
-function eraseAt(p){
-  const arr=currentShapes();
-  for(let i=arr.length-1;i>=0;i--){
-    const s=arr[i];
-    if(p.x>=s.x && p.x<=s.x+s.w && p.y>=s.y && p.y<=s.y+s.h){
-      arr.splice(i,1);
-      saveShapes();
-      drawAll(false);
-      toast('Shape erased');
-      return true;
-    }
-  }
-  return false;
-}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),800);}
+function saveShapes(){if(pdfKey)localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage));}
+function loadShapes(){shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}');}
+function pageKey(){return String(pageNum);}
+function currentShapes(){if(!shapesByPage[pageKey()])shapesByPage[pageKey()]=[];return shapesByPage[pageKey()];}
+function setEditMode(on){editMode=on;document.body.classList.toggle('editing',editMode);editBtn.textContent=editMode?'✓':'✎';toast(editMode?'Edit mode':'View mode');}
+function setTool(t){tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');}
+function pos(e){const r=drawCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};}
+function makeShape(a,b,type){return{type,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};}
+function drawShape(s){const w0=drawCanvas.clientWidth,h0=drawCanvas.clientHeight,x=s.x*w0,y=s.y*h0,w=s.w*w0,h=s.h*h0;if(s.type==='rect'){drawCtx.beginPath();drawCtx.roundRect(x,y,w,h,7);drawCtx.fill();drawCtx.stroke();}else{drawCtx.beginPath();drawCtx.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,Math.PI*2);drawCtx.fill();drawCtx.stroke();}}
+function drawAll(preview=false){drawCtx.clearRect(0,0,drawCanvas.width,drawCanvas.height);const scale=drawCanvas.width/drawCanvas.clientWidth;drawCtx.save();drawCtx.scale(scale,scale);drawCtx.lineWidth=3;drawCtx.strokeStyle='#ff453a';drawCtx.fillStyle='rgba(255,69,58,.13)';currentShapes().forEach(drawShape);if(preview&&start&&current)drawShape(makeShape(start,current,tool));drawCtx.restore();}
+function eraseAt(p){const arr=currentShapes();for(let i=arr.length-1;i>=0;i--){const s=arr[i];if(p.x>=s.x&&p.x<=s.x+s.w&&p.y>=s.y&&p.y<=s.y+s.h){arr.splice(i,1);saveShapes();drawAll(false);toast('Shape erased');return true;}}return false;}
 
 async function renderPage(n){
-  if(!doc||rendering)return;
-  rendering=true;
+  if(!doc||rendering)return; rendering=true;
   const page=await doc.getPage(n);
   const base=page.getViewport({scale:1});
   const displayScale=(Math.max(280,viewer.clientWidth-20))/base.width;
   const dpr=window.devicePixelRatio||1;
   const vp=page.getViewport({scale:displayScale*dpr});
-
-  pdfCanvas.width=Math.floor(vp.width);
-  pdfCanvas.height=Math.floor(vp.height);
-  pdfCanvas.style.width=(vp.width/dpr)+'px';
-  pdfCanvas.style.height=(vp.height/dpr)+'px';
-
-  drawCanvas.width=Math.floor(vp.width);
-  drawCanvas.height=Math.floor(vp.height);
-  drawCanvas.style.width=(vp.width/dpr)+'px';
-  drawCanvas.style.height=(vp.height/dpr)+'px';
-
-  stage.style.width=(vp.width/dpr)+'px';
-  stage.style.height=(vp.height/dpr)+'px';
-
+  [pdfCanvas,drawCanvas].forEach(c=>{c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.width=(vp.width/dpr)+'px';c.style.height=(vp.height/dpr)+'px';});
+  stage.style.width=(vp.width/dpr)+'px';stage.style.height=(vp.height/dpr)+'px';
   await page.render({canvasContext:pdfCtx,viewport:vp}).promise;
-
   titleSub.textContent=`Page ${pageNum} of ${doc.numPages}`;
-  prev.disabled=pageNum<=1;
-  next.disabled=pageNum>=doc.numPages;
-  drawAll(false);
-  rendering=false;
+  prev.disabled=pageNum<=1; next.disabled=pageNum>=doc.numPages;
+  drawAll(false); rendering=false;
 }
-
-function goPrev(){ if(pageNum>1){pageNum--;renderPage(pageNum);} }
-function goNext(){ if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum);} }
-
+function goPrev(){if(pageNum>1){pageNum--;renderPage(pageNum);}}
+function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum);}}
 openBtn.onclick=()=>file.click();
+file.onchange=async()=>{const f=file.files[0];if(!f)return;pdfKey=f.name;titleMain.textContent=f.name;loadShapes();doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pageNum=1;empty.hidden=true;stage.hidden=false;[prev,next,rectTool,circleTool,editBtn].forEach(b=>b.disabled=false);setTool('rect');setEditMode(false);await renderPage(pageNum);};
+prev.onclick=goPrev; next.onclick=goNext; editBtn.onclick=()=>setEditMode(!editMode); rectTool.onclick=()=>setTool('rect'); circleTool.onclick=()=>setTool('circle');
 
-file.onchange=async()=>{
-  const f=file.files[0]; if(!f)return;
-  pdfKey=f.name;
-  titleMain.textContent=f.name;
-  loadShapes();
-  doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
-  pageNum=1;
-  empty.hidden=true;
-  stage.hidden=false;
-  [prev,next,rectTool,circleTool,editBtn].forEach(b=>b.disabled=false);
-  setTool('rect');
-  setEditMode(false);
-  await renderPage(pageNum);
-};
-
-prev.onclick=goPrev;
-next.onclick=goNext;
-editBtn.onclick=()=>setEditMode(!editMode);
-rectTool.onclick=()=>setTool('rect');
-circleTool.onclick=()=>setTool('circle');
-
-drawCanvas.addEventListener('pointerdown',e=>{
-  if(!doc)return;
-  drawCanvas.setPointerCapture(e.pointerId);
-  const p=pos(e);
-
-  if(!editMode){
-    swipeStart={x:e.clientX,y:e.clientY,t:Date.now(),scrollLeft:viewer.scrollLeft,scrollTop:viewer.scrollTop};
-    start=null;
-    return;
-  }
-
-  start=p;
-  current=start;
-});
-
-drawCanvas.addEventListener('pointermove',e=>{
-  if(!doc)return;
-  if(editMode && start){
-    current=pos(e);
-    drawAll(true);
-  }
-});
-
-drawCanvas.addEventListener('pointerup',e=>{
-  if(!doc)return;
-
-  if(!editMode && swipeStart){
-    const dx=e.clientX-swipeStart.x;
-    const dy=e.clientY-swipeStart.y;
-    const dt=Date.now()-swipeStart.t;
-    swipeStart=null;
-
-    if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.4 && dt<700){
-      dx<0 ? goNext() : goPrev();
-      return;
-    }
-
-    eraseAt(pos(e));
-    return;
-  }
-
-  if(editMode && start){
-    current=pos(e);
-    const s=makeShape(start,current,tool);
-    start=null; current=null;
-    if(s.w>.01&&s.h>.01){ currentShapes().push(s); saveShapes(); }
-    drawAll(false);
-  }
-});
-
-let resizeTimer=null;
-addEventListener('resize',()=>{
-  if(!doc)return;
-  clearTimeout(resizeTimer);
-  resizeTimer=setTimeout(()=>renderPage(pageNum),250);
-});
+drawCanvas.addEventListener('pointerdown',e=>{if(!doc)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}start=p;current=start;});
+drawCanvas.addEventListener('pointermove',e=>{if(editMode&&start){current=pos(e);drawAll(true);}});
+drawCanvas.addEventListener('pointerup',e=>{if(!doc)return;if(!editMode&&swipeStart){const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;swipeStart=null;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){dx<0?goNext():goPrev();return;}eraseAt(pos(e));return;}if(editMode&&start){current=pos(e);const s=makeShape(start,current,tool);start=null;current=null;if(s.w>.01&&s.h>.01){currentShapes().push(s);saveShapes();}drawAll(false);}});
+let resizeTimer=null;addEventListener('resize',()=>{if(!doc)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>renderPage(pageNum),250);});
 </script>
 </body>
 </html>
