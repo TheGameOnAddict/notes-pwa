@@ -636,6 +636,30 @@ body.copying .charHandle{
   touch-action:none !important;
 }
 
+
+/* v36: keep pinned index highlights visible even in edit mode */
+#pinHi{
+  position:absolute;
+  left:0;
+  top:0;
+  pointer-events:none;
+  z-index:4;
+}
+body.editing #pinHi{z-index:5}
+body.copying #pinHi{display:none}
+.pinHighlight{
+  position:absolute;
+  background:rgba(255,214,10,.34);
+  border-radius:2px;
+  mix-blend-mode:multiply;
+}
+body.editing .pinHighlight{
+  background:rgba(255,214,10,.40);
+}
+body.editing #draw{
+  z-index:6;
+}
+
 </style>
 </head>
 <body>
@@ -657,6 +681,7 @@ body.copying .charHandle{
     <div id="stage" hidden>
       <canvas id="pdf"></canvas>
       <div id="textHi"></div>
+      <div id="pinHi"></div>
       <div id="textLayer"></div>
       <canvas id="draw"></canvas>
     </div>
@@ -763,7 +788,9 @@ function setEditMode(on){
   if(editMode) closePanels('');
   document.body.classList.toggle('editing',editMode);
   editBtn.textContent=editMode?'✓':'✎';
+  renderPinnedIndexHighlights();
   renderTextHighlights();
+  drawAll(false);
   toast(editMode?'Edit mode':'View mode');
 }
 function setIndexMode(on){
@@ -882,15 +909,43 @@ function makeHiDiv(rect, active=false){
   return d;
 }
 function itemRects(item){if(!item)return[];if(item.selectedLines&&item.selectedLines.length)return item.lines.filter((_,i)=>item.selectedLines.includes(i)).flatMap(l=>l.rects);return item.rects||[]}
-function renderTextHighlights(){
-  clearTextHighlights();
+
+function clearPinnedHighlights(){
+  if(typeof pinHi!=='undefined') pinHi.innerHTML='';
+}
+function makePinHiDiv(rect){
+  const W=drawCanvas.clientWidth,H=drawCanvas.clientHeight;
+  const d=document.createElement('div');
+  d.className='pinHighlight';
+  d.style.left=(rect.x*W)+'px';
+  d.style.top=(rect.y*H)+'px';
+  d.style.width=(rect.w*W)+'px';
+  d.style.height=(Math.max(rect.h*H,2))+'px';
+  return d;
+}
+function renderPinnedIndexHighlights(){
+  clearPinnedHighlights();
+  if(typeof pinHi==='undefined') return;
   const items=indexItemsByPage[pageKey()]||[];
   const pins=pagePins();
-  const shown=[];
-  items.forEach(it=>{ if(pins.includes(it.label)) shown.push({it,active:false}); });
-  if(indexMode&&activeIndex) shown.push({it:activeIndex,active:true});
-  for(const row of shown){for(const r of itemRects(row.it)) textHi.appendChild(makeHiDiv(r,row.active));}
+  items.forEach(it=>{
+    if(pins.includes(it.label)){
+      for(const r of itemRects(it)) pinHi.appendChild(makePinHiDiv(r));
+    }
+  });
 }
+function renderTextHighlights(){
+  clearTextHighlights();
+  renderPinnedIndexHighlights();
+
+  const items=indexItemsByPage[pageKey()]||[];
+
+  // Active carousel/copy preview highlights live in textHi.
+  if(indexMode&&activeIndex){
+    for(const r of itemRects(activeIndex)) textHi.appendChild(makeHiDiv(r,true));
+  }
+}
+
 function renderPreview(){
   if(!activeIndex){previewText.textContent='No index selected';lineRefiner.innerHTML='';return;}
   const first=(activeIndex.lines&&activeIndex.lines[0]?.text)||activeIndex.label;
@@ -1047,6 +1102,7 @@ async function getRobustPageLines(){
 
 function clearCopyHighlightIfNeeded(){
   renderTextHighlights();
+  renderPinnedIndexHighlights();
 }
 function selectedCopyFullText(){
   const lines=pageLinesByPage[pageKey()]||[];
@@ -1195,6 +1251,7 @@ async function renderPage(n){
   [pdfCanvas,drawCanvas].forEach(c=>{c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.width=(vp.width/dpr)+'px';c.style.height=(vp.height/dpr)+'px';});
   stage.style.width=(vp.width/dpr)+'px';stage.style.height=(vp.height/dpr)+'px';
   textHi.style.width=(vp.width/dpr)+'px';textHi.style.height=(vp.height/dpr)+'px';
+  if(typeof pinHi!=='undefined'){pinHi.style.width=(vp.width/dpr)+'px';pinHi.style.height=(vp.height/dpr)+'px';}
   textLayer.style.width=(vp.width/dpr)+'px';textLayer.style.height=(vp.height/dpr)+'px';
   await page.render({canvasContext:pdfCtx,viewport:vp}).promise;
   await renderTextLayer(page,displayScale);
@@ -1203,7 +1260,7 @@ async function renderPage(n){
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
-  drawAll(false);renderTextHighlights();rendering=false;
+  drawAll(false);renderPinnedIndexHighlights();renderTextHighlights();rendering=false;
   if(n===pageNum){viewer.scrollLeft=(zoomFactor>1.01?oldX:0); viewer.scrollTop=oldY;}
   savePlace();
 }
@@ -1237,7 +1294,7 @@ file.onchange=async()=>{
 prev.onclick=goPrev;next.onclick=goNext;editBtn.onclick=()=>setEditMode(!editMode);
 rectTool.onclick=()=>setTool('rect');circleTool.onclick=()=>setTool('circle');eraseTool.onclick=()=>setTool('erase');
 indexBtn.onclick=()=>setIndexMode(!indexMode);
-clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];activeIndex=null;renderIndexCarousel();renderTextHighlights();toast('Page highlights cleared')};
+clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];activeIndex=null;renderIndexCarousel();renderPinnedIndexHighlights();renderTextHighlights();toast('Page highlights cleared')};
 chaptersBtn.onclick=()=>setChaptersMode(!chaptersMode);
 topZoomBtn.onclick=()=>setZoomMode(!zoomMode);
 copyBtn.onclick=()=>setCopyMode(!copyMode);
