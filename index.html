@@ -660,6 +660,81 @@ body.editing #draw{
   z-index:6;
 }
 
+
+/* v38 Search */
+#searchPanel{
+  display:none;
+  margin-bottom:8px;
+  border-radius:25px;
+  padding:8px;
+}
+body.searching #searchPanel{display:block}
+#searchTopRow{
+  display:grid;
+  grid-template-columns:1fr 36px;
+  gap:7px;
+  align-items:center;
+}
+#searchInput{
+  width:100%;
+  height:38px;
+  border:0;
+  outline:0;
+  border-radius:18px;
+  background:rgba(255,255,255,.10);
+  color:var(--text);
+  padding:0 12px;
+  font-size:15px;
+  font-weight:650;
+}
+#searchInput::placeholder{color:var(--muted)}
+#searchCloseBtn,#searchPrevBtn,#searchNextBtn{
+  border:0;
+  border-radius:17px;
+  background:rgba(255,255,255,.10);
+  color:var(--text);
+  font-size:20px;
+  font-weight:900;
+  height:36px;
+}
+#searchBottomRow{
+  margin-top:7px;
+  display:grid;
+  grid-template-columns:42px 1fr 42px;
+  gap:7px;
+  align-items:center;
+}
+#searchStatus{
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:780;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+body.searching #searchBtn{background:rgba(10,132,255,.22)}
+body.searching #copyBtn,
+body.searching #indexBtn,
+body.searching #clearIndexBtn{display:none}
+body.searching #viewControls{grid-template-columns:1fr}
+body.indexing #clearIndexBtn{display:block}
+#clearIndexBtn{display:none}
+body.indexing #copyBtn,
+body.indexing #searchBtn{display:none}
+body.indexing #viewControls{grid-template-columns:1fr 1fr}
+body:not(.indexing):not(.searching) #viewControls{grid-template-columns:1fr 1fr 1fr}
+.searchHighlight{
+  position:absolute;
+  background:rgba(255,214,10,.28);
+  border-radius:2px;
+  mix-blend-mode:multiply;
+}
+.searchHighlight.current{
+  background:rgba(255,149,0,.50);
+  outline:1px solid rgba(255,149,0,.85);
+}
+
 </style>
 </head>
 <body>
@@ -693,6 +768,17 @@ body.editing #draw{
   </div>
 
   <div id="bottomArea">
+    <div id="searchPanel" class="frost">
+      <div id="searchTopRow">
+        <input id="searchInput" type="search" placeholder="Search PDF">
+        <button id="searchCloseBtn">×</button>
+      </div>
+      <div id="searchBottomRow">
+        <button id="searchPrevBtn">‹</button>
+        <div id="searchStatus">Type to search</div>
+        <button id="searchNextBtn">›</button>
+      </div>
+    </div>
     <div id="copyPanel" class="frost">
       <div id="copyTextPreview">Use the right handles to choose start/end lines. Use the bottom handles to trim characters.</div>
       <button id="copyDoBtn">Copy</button>
@@ -734,6 +820,7 @@ body.editing #draw{
       <button id="chaptersBtn" class="circleNav" disabled aria-label="Chapters">📖</button>
       <div id="centerControls">
         <div id="viewControls">
+          <button id="searchBtn" class="actionBtn" disabled>Search</button>
           <button id="copyBtn" class="actionBtn" disabled>Copy</button>
           <button id="indexBtn" class="actionBtn" disabled>Index</button>
           <button id="clearIndexBtn" class="actionBtn" disabled>Clear</button>
@@ -756,11 +843,12 @@ import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
-let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,refineMode=false,chaptersMode=false,zoomMode=false,copyMode=false;
+let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,refineMode=false,chaptersMode=false,zoomMode=false,copyMode=false,searchMode=false;
 let shapesByPage={},start=null,current=null,swipeStart=null;
 let indexItemsByPage={}, activeIndex=null;
 let pinnedIndexes={}; // session only
 let outlineItems=[];
+let searchQuery='', searchResults=[], currentSearchIndex=-1, searchToken=0;
 let pageLinesByPage={};
 let copyLineStart=0, copyLineEnd=0, copyCharStartVal=0, copyCharEndVal=0;
 let zoomFactor=1; // 1 = fit width
@@ -782,6 +870,7 @@ function closePanels(except=''){
   if(except!=='chapters') { chaptersMode=false; document.body.classList.remove('chapters'); }
   if(except!=='zoom') { zoomMode=false; document.body.classList.remove('zooming'); }
   if(except!=='copy') { copyMode=false; document.body.classList.remove('copying'); clearCopyHighlightIfNeeded(); }
+  if(except!=='search') { searchMode=false; document.body.classList.remove('searching'); }
 }
 function setEditMode(on){
   editMode=on;
@@ -1239,6 +1328,119 @@ async function copyCurrentSelection(){
   }
 }
 
+
+function setSearchMode(on){
+  closePanels(on?'search':'');
+  searchMode=on;
+  document.body.classList.toggle('searching',searchMode);
+  if(searchMode){
+    setTimeout(()=>{searchInput.focus();searchInput.select();},50);
+    renderSearchHighlights();
+  }else{
+    renderTextHighlights();
+  }
+}
+function normalizeText(s){return (s||'').toLowerCase().replace(/\s+/g,' ').trim();}
+function clearSearchHighlights(){
+  const old=[...textHi.querySelectorAll('.searchHighlight')];
+  old.forEach(x=>x.remove());
+}
+function makeSearchDiv(rect,current=false){
+  const W=drawCanvas.clientWidth,H=drawCanvas.clientHeight;
+  const d=document.createElement('div');
+  d.className='searchHighlight'+(current?' current':'');
+  d.style.left=(rect.x*W)+'px';
+  d.style.top=(rect.y*H)+'px';
+  d.style.width=(rect.w*W)+'px';
+  d.style.height=(Math.max(rect.h*H,2))+'px';
+  return d;
+}
+async function getPageLinesForSearch(pn){
+  if(pageLinesByPage[String(pn)] && pageLinesByPage[String(pn)].length) return pageLinesByPage[String(pn)];
+  const page=await doc.getPage(pn);
+  const content=await page.getTextContent();
+  const viewport=page.getViewport({scale:1});
+  const raw=[];
+  for(const item of content.items){
+    const str=(item.str||'').trim();
+    if(!str) continue;
+    const tx=item.transform||[1,0,0,1,0,0];
+    raw.push({
+      str,
+      x:tx[4]/viewport.width,
+      y:1-(tx[5]/viewport.height),
+      w:(item.width||Math.max(1,str.length*4))/viewport.width,
+      h:Math.max(.008,(Math.abs(tx[3])||8)/viewport.height)
+    });
+  }
+  const lines=lineGroups(raw);
+  pageLinesByPage[String(pn)]=lines;
+  return lines;
+}
+function updateSearchStatus(msg=''){
+  if(msg){searchStatus.textContent=msg;return;}
+  if(!searchQuery) searchStatus.textContent='Type to search';
+  else if(!searchResults.length) searchStatus.textContent='No results';
+  else searchStatus.textContent=`${currentSearchIndex+1} of ${searchResults.length}`;
+}
+async function runSearch(){
+  const q=normalizeText(searchInput.value);
+  searchQuery=q;
+  const token=++searchToken;
+  searchResults=[];
+  currentSearchIndex=-1;
+  clearSearchHighlights();
+  if(!q){updateSearchStatus();return;}
+  updateSearchStatus('Searching…');
+
+  for(let pn=1; pn<=doc.numPages; pn++){
+    if(token!==searchToken) return;
+    const lines=await getPageLinesForSearch(pn);
+    for(let li=0; li<lines.length; li++){
+      const line=lines[li];
+      const text=normalizeText(line.text);
+      let idx=text.indexOf(q);
+      while(idx>=0){
+        searchResults.push({page:pn,lineIndex:li,rect:line.rects?.[0],text:line.text,matchIndex:idx});
+        idx=text.indexOf(q,idx+q.length);
+      }
+    }
+    if(pn%8===0) updateSearchStatus(`Searching ${pn}/${doc.numPages}`);
+  }
+  if(token!==searchToken) return;
+  currentSearchIndex=searchResults.length?0:-1;
+  updateSearchStatus();
+  if(searchResults.length) jumpToSearchResult(0);
+}
+async function jumpToSearchResult(i){
+  if(!searchResults.length) return;
+  currentSearchIndex=(i+searchResults.length)%searchResults.length;
+  const r=searchResults[currentSearchIndex];
+  if(r.page!==pageNum){
+    pageNum=r.page;
+    await renderPage(pageNum);
+  }
+  updateSearchStatus();
+  renderSearchHighlights();
+  const rect=r.rect;
+  if(rect){
+    requestAnimationFrame(()=>{
+      const targetY=(rect.y*stage.clientHeight)-viewer.clientHeight*0.35;
+      viewer.scrollTop=Math.max(0,targetY);
+    });
+  }
+}
+function renderSearchHighlights(){
+  renderTextHighlights();
+  clearSearchHighlights();
+  if(!searchMode || !searchResults.length) return;
+  const pageResults=searchResults.filter(r=>r.page===pageNum && r.rect);
+  pageResults.forEach(r=>{
+    const current=searchResults[currentSearchIndex]===r;
+    textHi.appendChild(makeSearchDiv(r.rect,current));
+  });
+}
+
 async function renderPage(n){
   if(!doc||rendering)return;rendering=true;
   const oldX=viewer.scrollLeft, oldY=viewer.scrollTop;
@@ -1260,7 +1462,7 @@ async function renderPage(n){
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
-  drawAll(false);renderPinnedIndexHighlights();renderTextHighlights();rendering=false;
+  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());rendering=false;
   if(n===pageNum){viewer.scrollLeft=(zoomFactor>1.01?oldX:0); viewer.scrollTop=oldY;}
   savePlace();
 }
@@ -1281,7 +1483,7 @@ file.onchange=async()=>{
   pageNum=Math.max(1,Math.min(doc.numPages,place?.page||1));
   zoomFactor=Math.max(.75,Math.min(3,place?.zoom||1));
   empty.hidden=true;stage.hidden=false;
-  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,topZoomBtn].forEach(b=>b.disabled=false);
+  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,searchBtn,topZoomBtn].forEach(b=>b.disabled=false);
   setTool('rect');setEditMode(false);setIndexMode(false);setZoomMode(false);setChaptersMode(false);
   await loadChapters();
   updateZoomLabel();
@@ -1302,6 +1504,21 @@ zoomOut.onclick=()=>setZoom(zoomFactor-.25);
 zoomIn.onclick=()=>setZoom(zoomFactor+.25);
 zoomFit.onclick=()=>setZoom(1);
 idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
+
+searchBtn.onclick=()=>setSearchMode(!searchMode);
+searchCloseBtn.onclick=()=>setSearchMode(false);
+searchPrevBtn.onclick=()=>jumpToSearchResult(currentSearchIndex-1);
+searchNextBtn.onclick=()=>jumpToSearchResult(currentSearchIndex+1);
+let searchDebounce=null;
+searchInput.addEventListener('input',()=>{
+  clearTimeout(searchDebounce);
+  searchDebounce=setTimeout(runSearch,280);
+});
+searchInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter') jumpToSearchResult(currentSearchIndex+1);
+  if(e.key==='Escape') setSearchMode(false);
+});
+
 
 copyDoBtn.onclick=()=>copyCurrentSelection();
 
