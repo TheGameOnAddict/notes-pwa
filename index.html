@@ -16,7 +16,7 @@
   --panel:rgba(35,37,44,.82);
   --button:rgba(255,255,255,.12);
   --stroke:rgba(255,255,255,.16);
-  --highlight:rgba(255,214,10,.36);
+  --highlight:rgba(255,214,10,.34);
   --highlight-strong:rgba(255,214,10,.52);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -45,21 +45,54 @@ body::before{
   display:grid;place-items:center;box-shadow:inset 0 1px rgba(255,255,255,.14),0 4px 10px rgba(0,0,0,.18);
 }
 .iconBtn:disabled{opacity:.35}
-#title{text-align:center;min-width:0;width:100%}
-#titleMain{font-size:15px;line-height:18px;font-weight:760;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#title{text-align:center;min-width:0;width:100%;cursor:pointer}
+#titleMain{font-size:15px;line-height:18px;font-weight:760;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:font-size .15s}
 #titleSub{
   margin:2px auto 0;width:max-content;max-width:160px;border-radius:999px;padding:2px 8px 3px;
   background:rgba(255,255,255,.09);color:var(--muted);font-size:11px;line-height:12px;font-weight:780;
 }
+#pageJump{
+  display:none;
+  margin:2px auto 0;
+  width:96px;
+  border:0;
+  outline:0;
+  border-radius:999px;
+  padding:3px 8px 4px;
+  background:rgba(255,255,255,.16);
+  color:var(--text);
+  text-align:center;
+  font-size:15px;
+  font-weight:850;
+}
+body.jumping #titleMain{font-size:11px;color:var(--muted)}
+body.jumping #titleSub{display:none}
+body.jumping #pageJump{display:block}
 #file{position:absolute;left:-9999px}
+
 #viewer{
   flex:1 1 auto;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;
   padding:3px 16px 10px;-webkit-overflow-scrolling:touch;
 }
 #stage{position:relative}
 canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px rgba(0,0,0,.24)}
-#draw{position:absolute;left:0;top:0;background:transparent;touch-action:none;z-index:2}
+#pdf{position:relative;z-index:0}
 #textHi{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
+#textLayer{
+  position:absolute;left:0;top:0;z-index:2;
+  user-select:text;-webkit-user-select:text;
+  overflow:hidden;
+}
+#textLayer span{
+  position:absolute;
+  white-space:pre;
+  transform-origin:0 0;
+  color:rgba(0,0,0,.015);
+  user-select:text;-webkit-user-select:text;
+}
+#draw{position:absolute;left:0;top:0;background:transparent;touch-action:none;z-index:3;pointer-events:none}
+body.editing #draw{pointer-events:auto}
+body.editing #textLayer{pointer-events:none;user-select:none;-webkit-user-select:none}
 .textHighlight{
   position:absolute;
   background:var(--highlight);
@@ -73,20 +106,37 @@ canvas{display:block;background:#fff;border-radius:12px;box-shadow:0 18px 48px r
 #empty p{margin:0;color:var(--muted);line-height:1.32;font-size:14px;font-weight:560}
 
 #bottomArea{flex:0 0 auto;padding:7px 16px calc(env(safe-area-inset-bottom) + 4px);background:transparent}
+#indexPreview{
+  display:none;margin-bottom:6px;border-radius:20px;padding:9px 12px;color:var(--text);
+  font-size:13px;line-height:1.25;font-weight:650;max-height:56px;overflow:hidden;
+}
+body.indexing #indexPreview{display:block}
+body.refining #indexPreview{max-height:142px}
+#previewHint{color:var(--muted);font-size:11px;font-weight:700;margin-top:3px}
+#lineRefiner{display:none;margin-top:7px;gap:6px;overflow-x:auto;padding-bottom:2px}
+body.refining #lineRefiner{display:flex}
+.lineChip{
+  flex:0 0 auto;max-width:210px;border:0;border-radius:14px;padding:8px 10px;
+  background:rgba(255,255,255,.10);color:var(--text);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.lineChip.off{opacity:.42;text-decoration:line-through}
 #indexPanel{
   display:none;margin-bottom:8px;border-radius:25px;padding:8px 6px;align-items:center;gap:6px;
 }
 body.indexing #indexPanel{display:flex}
+body.refining #indexPanel{padding:5px 6px}
 #indexTrack{
   flex:1;display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
   padding:10px 42%; scroll-padding-inline:42%;
 }
+body.refining #indexTrack{padding-top:4px;padding-bottom:4px}
 #indexTrack::-webkit-scrollbar{display:none}
 .indexChip{
   flex:0 0 auto;border:0;border-radius:18px;padding:11px 15px;background:rgba(255,255,255,.10);color:var(--text);
   font-size:15px;font-weight:900;scroll-snap-align:center;transition:transform .12s ease, opacity .12s ease, background .12s ease;
   transform:scale(.78);opacity:.48;
 }
+body.refining .indexChip{padding:7px 11px;font-size:12px}
 .indexChip.near{transform:scale(.9);opacity:.7}
 .indexChip.active{transform:scale(1.18);opacity:1;background:rgba(255,214,10,.30);box-shadow:inset 0 0 0 1px rgba(255,214,10,.75)}
 .indexChip.pinned::after{content:" •";color:rgb(255,214,10)}
@@ -132,6 +182,7 @@ body.indexing #indexBtn{background:rgba(255,214,10,.20)}
       <div id="title">
         <div id="titleMain">PDF Markup</div>
         <div id="titleSub">Open a PDF</div>
+        <input id="pageJump" type="number" inputmode="numeric" min="1" placeholder="Page">
       </div>
       <input id="file" type="file" accept="application/pdf">
     </div>
@@ -141,16 +192,23 @@ body.indexing #indexBtn{background:rgba(255,214,10,.20)}
     <div id="stage" hidden>
       <canvas id="pdf"></canvas>
       <div id="textHi"></div>
+      <div id="textLayer"></div>
       <canvas id="draw"></canvas>
     </div>
     <div id="empty" class="frost">
       <div id="emptyIcon">📄</div>
       <h1>Open a PDF</h1>
-      <p>Swipe pages in view mode. Use Index to scan part callouts on the page.</p>
+      <p>Tap the page pill to jump pages. Use Index to scan callouts.</p>
     </div>
   </div>
 
   <div id="bottomArea">
+    <div id="indexPreview" class="frost">
+      <div id="previewText">No index selected</div>
+      <div id="previewHint">Tap this preview to refine highlighted lines</div>
+      <div id="lineRefiner"></div>
+    </div>
+
     <div id="indexPanel" class="frost">
       <button id="idxPrev" class="panelBtn">‹</button>
       <div id="indexTrack"></div>
@@ -182,9 +240,10 @@ import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
-let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false;
+let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false,indexMode=false,refineMode=false;
 let shapesByPage={},start=null,current=null,swipeStart=null;
-let indexItemsByPage={}, activeIndex=null, pinnedIndexes={};
+let indexItemsByPage={}, activeIndex=null;
+let pinnedIndexes={}; // session only: not localStorage
 
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
 const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
@@ -192,8 +251,6 @@ const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),900)}
 function saveShapes(){if(pdfKey)localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage))}
 function loadShapes(){shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}')}
-function savePinned(){if(pdfKey)localStorage.setItem('indexPins_'+pdfKey,JSON.stringify(pinnedIndexes))}
-function loadPinned(){pinnedIndexes=JSON.parse(localStorage.getItem('indexPins_'+pdfKey)||'{}')}
 function pageKey(){return String(pageNum)}
 function currentShapes(){if(!shapesByPage[pageKey()])shapesByPage[pageKey()]=[];return shapesByPage[pageKey()]}
 function pagePins(){if(!pinnedIndexes[pageKey()])pinnedIndexes[pageKey()]=[];return pinnedIndexes[pageKey()]}
@@ -206,11 +263,18 @@ function setEditMode(on){
   toast(editMode?'Edit mode':'View mode');
 }
 function setIndexMode(on){
-  indexMode=on;
+  indexMode=on; refineMode=false;
   document.body.classList.toggle('indexing',indexMode);
+  document.body.classList.toggle('refining',false);
   if(indexMode) scanIndexesForPage();
   else activeIndex=null;
   renderTextHighlights();
+}
+function setRefineMode(on){
+  if(!activeIndex) return;
+  refineMode=on;
+  document.body.classList.toggle('refining',refineMode);
+  renderPreview();
 }
 function setTool(t){
   tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');eraseTool.classList.toggle('active',t==='erase');
@@ -237,6 +301,21 @@ function eraseAt(p){
   toast('No shape hit');return false;
 }
 
+title.onclick=()=>{
+  if(!doc || document.body.classList.contains('jumping')) return;
+  document.body.classList.add('jumping');
+  pageJump.value=pageNum;
+  setTimeout(()=>{pageJump.focus();pageJump.select();},50);
+};
+function commitPageJump(){
+  if(!doc) return;
+  const n=Math.max(1,Math.min(doc.numPages,Number(pageJump.value||pageNum)));
+  document.body.classList.remove('jumping');
+  if(n!==pageNum){pageNum=n;renderPage(pageNum);}
+}
+pageJump.addEventListener('keydown',e=>{if(e.key==='Enter')commitPageJump(); if(e.key==='Escape')document.body.classList.remove('jumping')});
+pageJump.addEventListener('blur',()=>{if(document.body.classList.contains('jumping'))commitPageJump()});
+
 function clearTextHighlights(){textHi.innerHTML=''}
 function makeHiDiv(rect, active=false){
   const W=drawCanvas.clientWidth,H=drawCanvas.clientHeight;
@@ -248,6 +327,13 @@ function makeHiDiv(rect, active=false){
   d.style.height=(Math.max(rect.h*H,2))+'px';
   return d;
 }
+function itemRects(item){
+  if(!item) return [];
+  if(item.selectedLines && item.selectedLines.length){
+    return item.lines.filter((_,i)=>item.selectedLines.includes(i)).flatMap(l=>l.rects);
+  }
+  return item.rects || [];
+}
 function renderTextHighlights(){
   clearTextHighlights();
   const items=indexItemsByPage[pageKey()]||[];
@@ -256,10 +342,36 @@ function renderTextHighlights(){
   items.forEach(it=>{ if(pins.includes(it.label)) shown.push({it,active:false}); });
   if(indexMode&&activeIndex) shown.push({it:activeIndex,active:true});
   for(const row of shown){
-    const rects=row.it.rects && row.it.rects.length ? row.it.rects : [{x:0.02,y:row.it.y,w:.96,h:row.it.h}];
+    const rects=itemRects(row.it);
     for(const r of rects) textHi.appendChild(makeHiDiv(r,row.active));
   }
 }
+function renderPreview(){
+  if(!activeIndex){previewText.textContent='No index selected';lineRefiner.innerHTML='';return;}
+  const first=(activeIndex.lines&&activeIndex.lines[0]?.text)||activeIndex.label;
+  previewText.textContent=`${activeIndex.label}: ${first}`;
+  previewHint.textContent=refineMode?'Tap lines to include/exclude. Tap preview again to collapse.':'Tap this preview to refine highlighted lines';
+  lineRefiner.innerHTML='';
+  if(!refineMode) return;
+  if(!activeIndex.selectedLines) activeIndex.selectedLines=activeIndex.lines.map((_,i)=>i);
+  activeIndex.lines.forEach((line,i)=>{
+    const b=document.createElement('button');
+    b.className='lineChip';
+    b.textContent=line.text || `Line ${i+1}`;
+    if(!activeIndex.selectedLines.includes(i)) b.classList.add('off');
+    b.onclick=(e)=>{
+      e.stopPropagation();
+      const arr=activeIndex.selectedLines;
+      const idx=arr.indexOf(i);
+      if(idx>=0) arr.splice(idx,1); else arr.push(i);
+      b.classList.toggle('off');
+      renderTextHighlights();
+    };
+    lineRefiner.appendChild(b);
+  });
+}
+indexPreview.onclick=()=>setRefineMode(!refineMode);
+
 function styleCarousel(){
   const chips=[...indexTrack.children];
   if(!chips.length) return;
@@ -277,15 +389,38 @@ function styleCarousel(){
   if(closest){
     const items=indexItemsByPage[pageKey()]||[];
     closest.chip.classList.add('active');
-    activeIndex=items[closest.i]||activeIndex;
-    renderTextHighlights();
+    const next=items[closest.i];
+    if(next && (!activeIndex || next.label!==activeIndex.label)){
+      activeIndex=next;
+      renderPreview();
+      renderTextHighlights();
+    }
   }
 }
 
+function lineGroups(chunks){
+  chunks.sort((a,b)=>a.y-b.y || a.x-b.x);
+  const lines=[];
+  for(const c of chunks){
+    let line=lines.find(l=>Math.abs(l.y-c.y)<0.006);
+    if(!line){line={y:c.y,items:[]};lines.push(line);}
+    line.items.push(c);
+  }
+  lines.forEach(l=>{
+    l.items.sort((a,b)=>a.x-b.x);
+    l.text=l.items.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+    const minX=Math.min(...l.items.map(i=>i.x));
+    const maxX=Math.max(...l.items.map(i=>i.x+i.w));
+    const minY=Math.min(...l.items.map(i=>i.y-i.h*.9));
+    const maxY=Math.max(...l.items.map(i=>i.y+i.h*.35));
+    l.rects=[{x:Math.max(0,minX-.003),y:Math.max(0,minY),w:Math.min(.98,maxX-minX+.006),h:Math.max(.006,maxY-minY)}];
+  });
+  return lines;
+}
 async function scanIndexesForPage(){
   if(!doc) return;
   const key=pageKey();
-  if(indexItemsByPage[key]){renderIndexCarousel();renderTextHighlights();return;}
+  if(indexItemsByPage[key]){renderIndexCarousel();renderPreview();renderTextHighlights();return;}
   const page=await doc.getPage(pageNum);
   const content=await page.getTextContent();
   const base=page.getViewport({scale:1});
@@ -299,29 +434,30 @@ async function scanIndexesForPage(){
     const h=Math.max(.008, (Math.abs(it.transform[3])||8)/base.height);
     chunks.push({str,x,y,w,h});
   }
+  const lines=lineGroups(chunks);
   const hits=[];
-  for(const ch of chunks){
-    const m=ch.str.match(/(^|\s)(-\d{1,4}[A-Z]?)(?=\s|$)/i);
-    if(m) hits.push({label:m[2],x:ch.x,y:ch.y});
-  }
-  hits.sort((a,b)=>a.y-b.y || a.x-b.x);
-  const unique=[];
-  for(const h of hits){
-    if(unique.some(u=>u.label===h.label && Math.abs(u.y-h.y)<.015)) continue;
-    unique.push(h);
-  }
-  const items=unique.map((h,i)=>{
-    const next=unique[i+1];
-    const y0=Math.max(0,h.y-.018);
-    const y1=next ? Math.min(.98,next.y-.012) : Math.min(.98,h.y+.07);
-    const rects=chunks
-      .filter(c=>c.y>=y0 && c.y<=y1)
-      .map(c=>({x:Math.max(0,c.x-.003),y:Math.max(0,c.y-c.h*.9),w:Math.min(.98,c.w+.006),h:c.h*1.25}));
-    return {label:h.label,x:h.x,y:y0,h:Math.max(.025,y1-y0),rects};
+  lines.forEach((l,idx)=>{
+    const m=l.text.match(/(^|\s)(-\d{1,4}[A-Z]?)(?=\s|$)/i);
+    if(m) hits.push({label:m[2],lineIndex:idx,y:l.y});
+  });
+  const items=hits.map((h,i)=>{
+    const next=hits[i+1];
+    const start=h.lineIndex;
+    const end=next?Math.max(start+1,next.lineIndex):Math.min(lines.length,start+4);
+    const selectedLines=[...Array(end-start).keys()];
+    const itemLines=lines.slice(start,end);
+    return {
+      label:h.label,
+      y:itemLines[0]?.y||h.y,
+      lines:itemLines,
+      selectedLines,
+      rects:itemLines.flatMap(l=>l.rects)
+    };
   });
   indexItemsByPage[key]=items;
   renderIndexCarousel();
   toast(items.length?`Found ${items.length} indexes`:'No indexes found');
+  renderPreview();
   renderTextHighlights();
 }
 function renderIndexCarousel(){
@@ -341,7 +477,7 @@ function renderIndexCarousel(){
       const arr=pagePins();
       const idx=arr.indexOf(it.label);
       if(idx>=0) arr.splice(idx,1); else arr.push(it.label);
-      savePinned(); renderIndexCarousel(); renderTextHighlights();
+      renderIndexCarousel(); renderPreview(); renderTextHighlights();
       setTimeout(()=>{indexTrack.children[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});styleCarousel();},20);
       toast(idx>=0?`${it.label} unpinned`:`${it.label} pinned`);
     };
@@ -363,7 +499,28 @@ function bumpIndex(dir){
   activeIndex=items[i];
   const chip=indexTrack.children[i];
   if(chip) chip.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
-  setTimeout(()=>{styleCarousel();renderTextHighlights();},120);
+  setTimeout(()=>{styleCarousel();renderPreview();renderTextHighlights();},120);
+}
+
+async function renderTextLayer(page, displayScale){
+  textLayer.innerHTML='';
+  const content=await page.getTextContent();
+  const viewport=page.getViewport({scale:displayScale});
+  for(const item of content.items){
+    const str=item.str||'';
+    if(!str.trim()) continue;
+    const tx=pdfjsLib.Util.transform(viewport.transform,item.transform);
+    const fontHeight=Math.hypot(tx[2],tx[3]) || 8;
+    const span=document.createElement('span');
+    span.textContent=str;
+    span.style.left=tx[4]+'px';
+    span.style.top=(tx[5]-fontHeight)+'px';
+    span.style.fontSize=fontHeight+'px';
+    span.style.width=((item.width||0)*displayScale)+'px';
+    span.style.height=(fontHeight*1.3)+'px';
+    span.style.fontFamily='sans-serif';
+    textLayer.appendChild(span);
+  }
 }
 
 async function renderPage(n){
@@ -376,10 +533,12 @@ async function renderPage(n){
   [pdfCanvas,drawCanvas].forEach(c=>{c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.width=(vp.width/dpr)+'px';c.style.height=(vp.height/dpr)+'px';});
   stage.style.width=(vp.width/dpr)+'px';stage.style.height=(vp.height/dpr)+'px';
   textHi.style.width=(vp.width/dpr)+'px';textHi.style.height=(vp.height/dpr)+'px';
+  textLayer.style.width=(vp.width/dpr)+'px';textLayer.style.height=(vp.height/dpr)+'px';
   await page.render({canvasContext:pdfCtx,viewport:vp}).promise;
+  await renderTextLayer(page,displayScale);
   titleSub.textContent=`Page ${pageNum} of ${doc.numPages}`;
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
-  activeIndex=null;clearTextHighlights();
+  activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
   drawAll(false);renderTextHighlights();rendering=false;
 }
@@ -389,7 +548,7 @@ function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum)}}
 openBtn.onclick=()=>file.click();
 file.onchange=async()=>{
   const f=file.files[0];if(!f)return;
-  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();loadPinned();indexItemsByPage={};
+  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();pinnedIndexes={};indexItemsByPage={};
   doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pageNum=1;
   empty.hidden=true;stage.hidden=false;
   [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn].forEach(b=>b.disabled=false);
@@ -398,24 +557,28 @@ file.onchange=async()=>{
 prev.onclick=goPrev;next.onclick=goNext;editBtn.onclick=()=>setEditMode(!editMode);
 rectTool.onclick=()=>setTool('rect');circleTool.onclick=()=>setTool('circle');eraseTool.onclick=()=>setTool('erase');
 indexBtn.onclick=()=>setIndexMode(!indexMode);
-clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];savePinned();activeIndex=null;renderIndexCarousel();renderTextHighlights();toast('Page highlights cleared')};
+clearIndexBtn.onclick=()=>{pinnedIndexes[pageKey()]=[];activeIndex=null;renderIndexCarousel();renderTextHighlights();toast('Page highlights cleared')};
 idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
 
+stage.addEventListener('pointerdown',e=>{
+  if(!doc || editMode) return;
+  swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};
+});
+stage.addEventListener('pointerup',e=>{
+  if(!doc || editMode || !swipeStart)return;
+  const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;swipeStart=null;
+  if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){dx<0?goNext():goPrev();}
+});
+
 drawCanvas.addEventListener('pointerdown',e=>{
-  if(!doc)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);
-  if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}
+  if(!doc||!editMode)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);
   if(tool==='erase'){eraseAt(p);start=null;return;}
   start=p;current=start;
 });
 drawCanvas.addEventListener('pointermove',e=>{if(editMode&&start&&tool!=='erase'){current=pos(e);drawAll(true)}});
 drawCanvas.addEventListener('pointerup',e=>{
-  if(!doc)return;
-  if(!editMode&&swipeStart){
-    const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;swipeStart=null;
-    if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){dx<0?goNext():goPrev();return;}
-    return;
-  }
-  if(editMode&&start&&tool!=='erase'){
+  if(!doc||!editMode)return;
+  if(start&&tool!=='erase'){
     current=pos(e);const s=makeShape(start,current,tool);start=null;current=null;
     if(s.w>.01&&s.h>.01){currentShapes().push(s);saveShapes();}
     drawAll(false);
