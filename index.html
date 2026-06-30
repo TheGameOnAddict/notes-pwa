@@ -2,40 +2,60 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>PDF Markup</title>
 <style>
 :root{
   color-scheme:dark;
-  --bg:#111827;
   --text:#f5f5f7;
   --muted:rgba(245,245,247,.68);
   --panel:rgba(42,44,52,.90);
   --button:rgba(255,255,255,.14);
   --stroke:rgba(255,255,255,.18);
 }
+
+/* iOS PWA fix:
+   Use 100vh, NOT 100%, for the viewport containers.
+   Do not use 100dvh here. iOS standalone can report it weirdly.
+*/
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{
+
+html,
+body{
   margin:0;
-  width:100%;
-  height:100%;
-  background:var(--bg);
+  width:100vw;
+  height:100vh;
   overflow:hidden;
+  background:#111827;
   color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Segoe UI",sans-serif;
 }
+
 body{
+  position:relative;
+}
+
+/* Extend the painted background past the viewport so the iOS chin never shows a hard cutoff. */
+body::before{
+  content:"";
+  position:fixed;
+  left:0;
+  right:0;
+  top:-80px;
+  bottom:-140px;
+  z-index:-1;
   background:
     radial-gradient(circle at 15% 0%, rgba(10,132,255,.18), transparent 34%),
     radial-gradient(circle at 86% 12%, rgba(191,90,242,.14), transparent 32%),
     linear-gradient(145deg,#12141a,#1c1f27 55%,#202633);
 }
 
-/* This is intentionally built like the old working version:
-   normal document flow, no fixed bottom math, no safe-area bottom padding. */
 #app{
+  width:100vw;
   height:100vh;
   display:flex;
   flex-direction:column;
@@ -54,6 +74,7 @@ body{
   flex:0 0 auto;
   padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;
 }
+
 #topbar{
   border-radius:30px;
   min-height:72px;
@@ -63,12 +84,14 @@ body{
   justify-content:center;
   position:relative;
 }
+
 #openBtn{
   position:absolute;
   left:8px;
   top:50%;
   transform:translateY(-50%);
 }
+
 .iconBtn{
   border:0;
   border-radius:21px;
@@ -81,8 +104,11 @@ body{
   place-items:center;
   box-shadow:inset 0 1px rgba(255,255,255,.16),0 5px 14px rgba(0,0,0,.20);
 }
+
 .iconBtn:disabled{opacity:.35}
+
 #title{text-align:center;min-width:0}
+
 #titleMain{
   font-size:18px;
   line-height:22px;
@@ -93,6 +119,7 @@ body{
   text-overflow:ellipsis;
   max-width:260px;
 }
+
 #titleSub{
   margin:5px auto 0;
   width:max-content;
@@ -105,6 +132,7 @@ body{
   line-height:14px;
   font-weight:800;
 }
+
 #file{position:absolute;left:-9999px}
 
 #viewer{
@@ -117,13 +145,16 @@ body{
   padding:8px 12px 10px;
   -webkit-overflow-scrolling:touch;
 }
+
 #stage{position:relative}
+
 canvas{
   display:block;
   background:#fff;
   border-radius:16px;
   box-shadow:0 24px 64px rgba(0,0,0,.25);
 }
+
 #draw{
   position:absolute;
   left:0;
@@ -131,6 +162,7 @@ canvas{
   background:transparent;
   touch-action:none;
 }
+
 #empty{
   margin-top:44px;
   width:min(340px,90vw);
@@ -138,17 +170,27 @@ canvas{
   padding:28px 22px;
   text-align:center;
 }
+
 #emptyIcon{
-  width:62px;height:62px;margin:0 auto 14px;border-radius:24px;
-  display:grid;place-items:center;font-size:30px;background:rgba(255,255,255,.12);
+  width:62px;
+  height:62px;
+  margin:0 auto 14px;
+  border-radius:24px;
+  display:grid;
+  place-items:center;
+  font-size:30px;
+  background:rgba(255,255,255,.12);
 }
+
 #empty h1{font-size:25px;margin:0 0 8px;letter-spacing:-.03em}
 #empty p{margin:0;color:var(--muted);line-height:1.35;font-size:15px;font-weight:560}
 
 #bottomArea{
   flex:0 0 auto;
-  padding:8px 12px 6px; /* no env(safe-area-inset-bottom): old behavior */
+  padding:8px 12px calc(env(safe-area-inset-bottom) + 8px);
+  background:transparent;
 }
+
 #utilityBar{
   border-radius:28px;
   padding:7px;
@@ -157,6 +199,7 @@ canvas{
   gap:7px;
   align-items:center;
 }
+
 #centerControls{
   min-width:0;
   height:48px;
@@ -167,6 +210,7 @@ canvas{
   grid-template-columns:1fr;
   box-shadow:inset 0 1px 4px rgba(0,0,0,.18);
 }
+
 .actionBtn{
   border:0;
   border-radius:17px;
@@ -175,24 +219,29 @@ canvas{
   font-size:15px;
   font-weight:850;
 }
+
 .actionBtn.active{
   background:rgba(255,255,255,.18);
   box-shadow:0 7px 18px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.18);
 }
+
 #viewControls{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 #editControls{display:none;grid-template-columns:1fr 1fr 1fr;gap:4px}
+
 body.editing #viewControls{display:none}
 body.editing #editControls{display:grid}
+
 body.editing #editBtn{
   background:linear-gradient(180deg,rgba(10,132,255,.95),rgba(0,102,220,.95));
   color:white;
 }
+
 #toast{
   position:fixed;
   z-index:20;
   left:50%;
   transform:translateX(-50%);
-  bottom:84px;
+  bottom:calc(env(safe-area-inset-bottom) + 84px);
   padding:9px 13px;
   border-radius:999px;
   background:rgba(20,20,30,.82);
@@ -203,6 +252,7 @@ body.editing #editBtn{
   transition:opacity .2s ease;
   pointer-events:none;
 }
+
 #toast.show{opacity:1}
 </style>
 </head>
@@ -253,62 +303,228 @@ body.editing #editBtn{
 <script type="module">
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs';
+
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
 
 let doc=null,pageNum=1,rendering=false,pdfKey='',tool='rect',editMode=false;
 let shapesByPage={},start=null,current=null,swipeStart=null;
+
 const pdfCanvas=pdf, pdfCtx=pdfCanvas.getContext('2d');
 const drawCanvas=draw, drawCtx=drawCanvas.getContext('2d');
 
-function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),800);}
-function saveShapes(){if(pdfKey)localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage));}
-function loadShapes(){shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}');}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),800);
+}
+
+function saveShapes(){
+  if(pdfKey)localStorage.setItem('annotations_'+pdfKey,JSON.stringify(shapesByPage));
+}
+
+function loadShapes(){
+  shapesByPage=JSON.parse(localStorage.getItem('annotations_'+pdfKey)||'{}');
+}
+
 function pageKey(){return String(pageNum);}
-function currentShapes(){if(!shapesByPage[pageKey()])shapesByPage[pageKey()]=[];return shapesByPage[pageKey()];}
-function setEditMode(on){editMode=on;document.body.classList.toggle('editing',editMode);editBtn.textContent=editMode?'✓':'✎';toast(editMode?'Edit mode':'View mode');}
-function setTool(t){tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');eraseTool.classList.toggle('active',t==='erase');}
-function pos(e){const r=drawCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};}
-function makeShape(a,b,type){return{type,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};}
-function drawShape(s){const w0=drawCanvas.clientWidth,h0=drawCanvas.clientHeight,x=s.x*w0,y=s.y*h0,w=s.w*w0,h=s.h*h0;if(s.type==='rect'){drawCtx.beginPath();drawCtx.roundRect(x,y,w,h,7);drawCtx.fill();drawCtx.stroke();}else{drawCtx.beginPath();drawCtx.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,Math.PI*2);drawCtx.fill();drawCtx.stroke();}}
-function drawAll(preview=false){drawCtx.clearRect(0,0,drawCanvas.width,drawCanvas.height);const scale=drawCanvas.width/drawCanvas.clientWidth;drawCtx.save();drawCtx.scale(scale,scale);drawCtx.lineWidth=3;drawCtx.strokeStyle='#ff453a';drawCtx.fillStyle='rgba(255,69,58,.13)';currentShapes().forEach(drawShape);if(preview&&start&&current)drawShape(makeShape(start,current,tool));drawCtx.restore();}
-function eraseAt(p){const arr=currentShapes();for(let i=arr.length-1;i>=0;i--){const s=arr[i];if(p.x>=s.x&&p.x<=s.x+s.w&&p.y>=s.y&&p.y<=s.y+s.h){arr.splice(i,1);saveShapes();drawAll(false);toast('Shape erased');return true;}}toast('No shape hit');return false;}
+
+function currentShapes(){
+  if(!shapesByPage[pageKey()])shapesByPage[pageKey()]=[];
+  return shapesByPage[pageKey()];
+}
+
+function setEditMode(on){
+  editMode=on;
+  document.body.classList.toggle('editing',editMode);
+  editBtn.textContent=editMode?'✓':'✎';
+  toast(editMode?'Edit mode':'View mode');
+}
+
+function setTool(t){
+  tool=t;
+  rectTool.classList.toggle('active',t==='rect');
+  circleTool.classList.toggle('active',t==='circle');
+  eraseTool.classList.toggle('active',t==='erase');
+}
+
+function pos(e){
+  const r=drawCanvas.getBoundingClientRect();
+  return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};
+}
+
+function makeShape(a,b,type){
+  return{type,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};
+}
+
+function drawShape(s){
+  const w0=drawCanvas.clientWidth,h0=drawCanvas.clientHeight,x=s.x*w0,y=s.y*h0,w=s.w*w0,h=s.h*h0;
+  if(s.type==='rect'){
+    drawCtx.beginPath();
+    drawCtx.roundRect(x,y,w,h,7);
+    drawCtx.fill();
+    drawCtx.stroke();
+  }else{
+    drawCtx.beginPath();
+    drawCtx.ellipse(x+w/2,y+h/2,Math.abs(w/2),Math.abs(h/2),0,0,Math.PI*2);
+    drawCtx.fill();
+    drawCtx.stroke();
+  }
+}
+
+function drawAll(preview=false){
+  drawCtx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+  const scale=drawCanvas.width/drawCanvas.clientWidth;
+  drawCtx.save();
+  drawCtx.scale(scale,scale);
+  drawCtx.lineWidth=3;
+  drawCtx.strokeStyle='#ff453a';
+  drawCtx.fillStyle='rgba(255,69,58,.13)';
+  currentShapes().forEach(drawShape);
+  if(preview&&start&&current)drawShape(makeShape(start,current,tool));
+  drawCtx.restore();
+}
+
+function eraseAt(p){
+  const arr=currentShapes();
+  for(let i=arr.length-1;i>=0;i--){
+    const s=arr[i];
+    if(p.x>=s.x&&p.x<=s.x+s.w&&p.y>=s.y&&p.y<=s.y+s.h){
+      arr.splice(i,1);
+      saveShapes();
+      drawAll(false);
+      toast('Shape erased');
+      return true;
+    }
+  }
+  toast('No shape hit');
+  return false;
+}
 
 async function renderPage(n){
-  if(!doc||rendering)return; rendering=true;
+  if(!doc||rendering)return;
+  rendering=true;
+
   const page=await doc.getPage(n);
   const base=page.getViewport({scale:1});
   const displayScale=(Math.max(280,viewer.clientWidth-4))/base.width;
   const dpr=window.devicePixelRatio||1;
   const vp=page.getViewport({scale:displayScale*dpr});
-  [pdfCanvas,drawCanvas].forEach(c=>{c.width=Math.floor(vp.width);c.height=Math.floor(vp.height);c.style.width=(vp.width/dpr)+'px';c.style.height=(vp.height/dpr)+'px';});
-  stage.style.width=(vp.width/dpr)+'px';stage.style.height=(vp.height/dpr)+'px';
+
+  [pdfCanvas,drawCanvas].forEach(c=>{
+    c.width=Math.floor(vp.width);
+    c.height=Math.floor(vp.height);
+    c.style.width=(vp.width/dpr)+'px';
+    c.style.height=(vp.height/dpr)+'px';
+  });
+
+  stage.style.width=(vp.width/dpr)+'px';
+  stage.style.height=(vp.height/dpr)+'px';
+
   await page.render({canvasContext:pdfCtx,viewport:vp}).promise;
+
   titleSub.textContent=`Page ${pageNum} of ${doc.numPages}`;
-  prev.disabled=pageNum<=1; next.disabled=pageNum>=doc.numPages;
-  drawAll(false); rendering=false;
+  prev.disabled=pageNum<=1;
+  next.disabled=pageNum>=doc.numPages;
+  drawAll(false);
+  rendering=false;
 }
+
 function goPrev(){if(pageNum>1){pageNum--;renderPage(pageNum);}}
 function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum);}}
-openBtn.onclick=()=>file.click();
-file.onchange=async()=>{const f=file.files[0];if(!f)return;pdfKey=f.name;titleMain.textContent=f.name;loadShapes();doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;pageNum=1;empty.hidden=true;stage.hidden=false;[prev,next,rectTool,circleTool,eraseTool,editBtn].forEach(b=>b.disabled=false);setTool('rect');setEditMode(false);await renderPage(pageNum);};
-prev.onclick=goPrev; next.onclick=goNext; editBtn.onclick=()=>setEditMode(!editMode); rectTool.onclick=()=>setTool('rect'); circleTool.onclick=()=>setTool('circle'); eraseTool.onclick=()=>setTool('erase');
 
-drawCanvas.addEventListener('pointerdown',e=>{if(!doc)return;drawCanvas.setPointerCapture(e.pointerId);const p=pos(e);if(!editMode){swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};start=null;return;}if(tool==='erase'){eraseAt(p);start=null;return;}start=p;current=start;});
-drawCanvas.addEventListener('pointermove',e=>{if(editMode&&start&&tool!=='erase'){current=pos(e);drawAll(true);}});
-drawCanvas.addEventListener('pointerup',e=>{
+openBtn.onclick=()=>file.click();
+
+file.onchange=async()=>{
+  const f=file.files[0];
+  if(!f)return;
+
+  pdfKey=f.name;
+  titleMain.textContent=f.name;
+  loadShapes();
+
+  doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+  pageNum=1;
+
+  empty.hidden=true;
+  stage.hidden=false;
+
+  [prev,next,rectTool,circleTool,eraseTool,editBtn].forEach(b=>b.disabled=false);
+  setTool('rect');
+  setEditMode(false);
+  await renderPage(pageNum);
+};
+
+prev.onclick=goPrev;
+next.onclick=goNext;
+editBtn.onclick=()=>setEditMode(!editMode);
+rectTool.onclick=()=>setTool('rect');
+circleTool.onclick=()=>setTool('circle');
+eraseTool.onclick=()=>setTool('erase');
+
+drawCanvas.addEventListener('pointerdown',e=>{
   if(!doc)return;
-  if(!editMode&&swipeStart){
-    const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;swipeStart=null;
-    if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){dx<0?goNext():goPrev();return;}
+  drawCanvas.setPointerCapture(e.pointerId);
+  const p=pos(e);
+
+  if(!editMode){
+    swipeStart={x:e.clientX,y:e.clientY,t:Date.now()};
+    start=null;
     return;
   }
+
+  if(tool==='erase'){
+    eraseAt(p);
+    start=null;
+    return;
+  }
+
+  start=p;
+  current=start;
+});
+
+drawCanvas.addEventListener('pointermove',e=>{
   if(editMode&&start&&tool!=='erase'){
-    current=pos(e);const s=makeShape(start,current,tool);start=null;current=null;
-    if(s.w>.01&&s.h>.01){currentShapes().push(s);saveShapes();}
+    current=pos(e);
+    drawAll(true);
+  }
+});
+
+drawCanvas.addEventListener('pointerup',e=>{
+  if(!doc)return;
+
+  if(!editMode&&swipeStart){
+    const dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y,dt=Date.now()-swipeStart.t;
+    swipeStart=null;
+
+    if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.4&&dt<700){
+      dx<0?goNext():goPrev();
+      return;
+    }
+    return;
+  }
+
+  if(editMode&&start&&tool!=='erase'){
+    current=pos(e);
+    const s=makeShape(start,current,tool);
+    start=null;
+    current=null;
+
+    if(s.w>.01&&s.h>.01){
+      currentShapes().push(s);
+      saveShapes();
+    }
     drawAll(false);
   }
 });
-let resizeTimer=null;addEventListener('resize',()=>{if(!doc)return;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>renderPage(pageNum),250);});
+
+let resizeTimer=null;
+addEventListener('resize',()=>{
+  if(!doc)return;
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>renderPage(pageNum),250);
+});
 </script>
 </body>
 </html>
