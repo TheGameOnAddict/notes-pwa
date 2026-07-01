@@ -909,6 +909,60 @@ body.collectionPicking #collectionPickerPanel{display:block}
 /* Floating markers were confusing; v42 uses the selected index card + chip dots instead. */
 #objectMarkers{display:none !important}
 
+
+/* v43 UX refinement: line-based indicators + better refine mode */
+#indexAssocMarkers{
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:9;
+}
+.indexAssocMarker{
+  position:absolute;
+  display:flex;
+  gap:3px;
+  align-items:center;
+  padding:3px 5px;
+  min-height:18px;
+  border:0;
+  border-radius:999px;
+  background:rgba(20,26,36,.72);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 2px 8px rgba(0,0,0,.24);
+  pointer-events:auto;
+}
+.indexAssocMarker .miniDot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  display:block;
+}
+.indexAssocMarker .miniDot.note{background:rgba(191,90,242,.98)}
+.indexAssocMarker .miniDot.collection{background:rgba(255,214,10,.98)}
+.indexAssocMarker .miniDot.link{background:rgba(10,132,255,.98)}
+body.refining #indexObjectSummary,
+body.refining #indexActionRow{
+  display:none !important;
+}
+body.refining #previewHint{
+  color:#ffd60a;
+}
+#lineRefiner{
+  max-height:118px;
+  overflow:auto;
+  padding-bottom:4px;
+}
+body.refining #lineRefiner{
+  margin-top:8px;
+}
+#lineRefiner .lineChip{
+  margin-bottom:5px;
+}
+
 </style>
 </head>
 <body>
@@ -936,6 +990,7 @@ body.collectionPicking #collectionPickerPanel{display:block}
       <div id="textLayer"></div>
       <canvas id="draw"></canvas>
       <div id="objectMarkers"></div>
+      <div id="indexAssocMarkers"></div>
     </div>
     <div id="empty" class="frost">
       <div id="emptyIcon">📄</div>
@@ -1601,6 +1656,94 @@ function chipBadgesForIndex(it){
   if(a.links.length) html+='<span class="chipDot link"></span>';
   return html ? `<span class="chipBadges">${html}</span>` : '';
 }
+
+function clearIndexAssocMarkers(){
+  if(typeof indexAssocMarkers!=='undefined') indexAssocMarkers.innerHTML='';
+}
+function renderIndexAssocMarkers(){
+  if(typeof indexAssocMarkers==='undefined' || !doc || stage.hidden) return;
+  clearIndexAssocMarkers();
+  const items=indexItemsByPage[pageKey()]||[];
+  const W=drawCanvas.clientWidth, H=drawCanvas.clientHeight;
+  indexAssocMarkers.style.width=W+'px';
+  indexAssocMarkers.style.height=H+'px';
+
+  items.forEach((it,i)=>{
+    const assoc=workspaceItemsForIndex(it.label,pageNum);
+    const hasNote=assoc.notes.length>0;
+    const hasCollection=assoc.collections.length>0;
+    const hasLink=assoc.links.length>0;
+    if(!hasNote && !hasCollection && !hasLink) return;
+
+    const rects=itemRects(it);
+    const r=rects[0] || {x:0,y:Math.min(.95,.05+i*.035),w:0,h:.02};
+    const marker=document.createElement('button');
+    marker.className='indexAssocMarker';
+    marker.setAttribute('aria-label',`${it.label} saved items`);
+    let dots='';
+    if(hasNote) dots+='<span class="miniDot note"></span>';
+    if(hasCollection) dots+='<span class="miniDot collection"></span>';
+    if(hasLink) dots+='<span class="miniDot link"></span>';
+    marker.innerHTML=dots;
+
+    // Put the marker next to the exact index line. If there is no room, keep it inside the page.
+    const rawLeft=(r.x+r.w)*W+5;
+    const left=Math.max(4,Math.min(W-58,rawLeft));
+    const top=Math.max(4,Math.min(H-24,(r.y*H)-2));
+    marker.style.left=left+'px';
+    marker.style.top=top+'px';
+
+    marker.onclick=(e)=>{
+      e.stopPropagation();
+      activeIndex=it;
+      rememberSelectedIndex(it);
+      renderPreview();
+      renderTextHighlights();
+      renderIndexCarousel();
+      openIndexObjectMenu(it,assoc);
+    };
+    indexAssocMarkers.appendChild(marker);
+  });
+}
+function openIndexObjectMenu(it,assoc=workspaceItemsForIndex(it.label,pageNum)){
+  setWorkspaceMode(true);
+  workspaceBody.innerHTML='';
+  const back=document.createElement('button');
+  back.className='workspaceRow';
+  back.innerHTML=`<div><div class="workspaceRowTitle">${it.label} saved items</div><div class="workspaceRowMeta">Tap an item to jump/open</div></div><span></span>`;
+  back.onclick=()=>renderWorkspace();
+  workspaceBody.appendChild(back);
+
+  if(!assoc.notes.length && !assoc.collections.length && !assoc.links.length){
+    workspaceBody.innerHTML+='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No saved items yet.</div>';
+    return;
+  }
+  assoc.notes.forEach(n=>{
+    const row=document.createElement('button');
+    row.className='workspaceRow noteItem';
+    row.innerHTML='<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Note</div></div><span></span>';
+    row.querySelector('.workspaceRowTitle').textContent=n.text;
+    row.onclick=()=>openNoteEditor(n.id);
+    workspaceBody.appendChild(row);
+  });
+  assoc.collections.forEach(({collection,item})=>{
+    const row=document.createElement('button');
+    row.className='workspaceRow collectionItem';
+    row.innerHTML='<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Collection</div></div><span></span>';
+    row.querySelector('.workspaceRowTitle').textContent=collection.name;
+    row.onclick=()=>jumpToContext(item.context);
+    workspaceBody.appendChild(row);
+  });
+  assoc.links.forEach(l=>{
+    const row=document.createElement('button');
+    row.className='workspaceRow linkItem';
+    row.innerHTML='<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Link</div></div><span></span>';
+    row.querySelector('.workspaceRowTitle').textContent=l.title||'Link';
+    row.onclick=()=>jumpToContext(l.to);
+    workspaceBody.appendChild(row);
+  });
+}
+
 function updateIndexActionCard(){
   if(typeof indexObjectSummary==='undefined') return;
   const it=activeIndex || getSelectedIndexForWorkspace();
@@ -1634,6 +1777,7 @@ function toggleSelectedPin(){
   renderIndexCarousel();
   renderPreview();
   renderTextHighlights();
+  renderIndexAssocMarkers();
   toast(idx>=0?`${it.label} unpinned`:`${it.label} pinned`);
 }
 function selectIndexItem(it,i=null,scroll=false){
@@ -1694,7 +1838,7 @@ function currentIndexText(){const sel=getSelectedIndexForWorkspace();if(sel?.lin
 function setWorkspaceMode(on){closePanels(on?'workspace':'');document.body.classList.toggle('workspaceOpen',on);if(on){updateSelectedIndexStatus();renderWorkspace();renderObjectMarkers();}}
 function setWorkspaceTab(tab){workspaceTab=tab;[tabCollections,tabNotes,tabLinks].forEach(b=>b.classList.remove('active'));({collections:tabCollections,notes:tabNotes,links:tabLinks}[tab])?.classList.add('active');renderWorkspace();}
 async function jumpToContext(ctx){if(!ctx||!doc)return;pageNum=Math.max(1,Math.min(doc.numPages,ctx.page||pageNum));zoomFactor=Math.max(.75,Math.min(3,ctx.zoom||1));updateZoomLabel();document.body.classList.remove('workspaceOpen','noteEditing','collectionPicking');await renderPage(pageNum);requestAnimationFrame(()=>{viewer.scrollLeft=ctx.sx||0;viewer.scrollTop=ctx.sy||0;});}
-function createCollection(){const name=prompt('Collection name?','New Collection');if(!name)return;createCollectionObject(name);saveWorkspace();renderWorkspace();renderCollectionPicker();renderIndexCarousel();renderPreview();toast('Collection created');}
+function createCollection(){const name=prompt('Collection name?','New Collection');if(!name)return;createCollectionObject(name);saveWorkspace();renderWorkspace();renderCollectionPicker();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();toast('Collection created');}
 function addCurrentPartToCollection(){
   if(!doc) return;
   const sel=activeIndex || getSelectedIndexForWorkspace();
@@ -1718,8 +1862,8 @@ function renderCollectionPicker(){
   });
 }
 function openNoteEditor(id=null){editingNoteId=id;const note=id?workspaceData.notes.find(n=>n.id===id):null;noteEditorTitle.textContent=id?'Edit Note':'New Note';noteTextInput.value=note?.text||'';document.body.classList.add('noteEditing');setTimeout(()=>noteTextInput.focus(),50);}
-function saveNote(){const text=noteTextInput.value.trim();if(!text){toast('Note is empty');return;}if(editingNoteId){const n=workspaceData.notes.find(x=>x.id===editingNoteId);if(n){n.text=text;n.updated=new Date().toISOString();}}else{workspaceData.notes.unshift({id:uid('note'),text,context:currentContext(),attachedTo:getSelectedIndexForWorkspace()?.label?'index':'page',created:new Date().toISOString()});}saveWorkspace();document.body.classList.remove('noteEditing');renderWorkspace();renderIndexCarousel();renderPreview();toast('Note saved');}
-function addLink(){const dest=prompt('Link destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Link label?','Link')||'Link';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderIndexCarousel();renderPreview();toast('Link created');}
+function saveNote(){const text=noteTextInput.value.trim();if(!text){toast('Note is empty');return;}if(editingNoteId){const n=workspaceData.notes.find(x=>x.id===editingNoteId);if(n){n.text=text;n.updated=new Date().toISOString();}}else{workspaceData.notes.unshift({id:uid('note'),text,context:currentContext(),attachedTo:getSelectedIndexForWorkspace()?.label?'index':'page',created:new Date().toISOString()});}saveWorkspace();document.body.classList.remove('noteEditing');renderWorkspace();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();toast('Note saved');}
+function addLink(){const dest=prompt('Link destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Link label?','Link')||'Link';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();toast('Link created');}
 function deleteWorkspaceObject(type,id,e){if(e){e.stopPropagation();e.preventDefault();}if(type==='collection')workspaceData.collections=workspaceData.collections.filter(x=>x.id!==id);if(type==='note')workspaceData.notes=workspaceData.notes.filter(x=>x.id!==id);if(type==='link')workspaceData.links=workspaceData.links.filter(x=>x.id!==id);saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Deleted');}
 function renderWorkspace(){if(typeof workspaceBody==='undefined')return;workspaceBody.innerHTML='';if(workspaceTab==='collections'){if(!workspaceData.collections.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No collections yet.</div>';return;}workspaceData.collections.forEach(col=>{const row=document.createElement('button');row.className='workspaceRow collectionItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">${col.items?.length||0} items</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=col.name;row.onclick=()=>renderCollectionItems(col);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('collection',col.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='notes'){if(!workspaceData.notes.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No notes yet.</div>';return;}workspaceData.notes.forEach(n=>{const row=document.createElement('button');row.className='workspaceRow noteItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${n.context?.page||'?'} ${n.context?.index?('• '+n.context.index):''}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=n.text;row.onclick=()=>jumpToContext(n.context);row.ondblclick=()=>openNoteEditor(n.id);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('note',n.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='links'){if(!workspaceData.links.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No links yet.</div>';return;}workspaceData.links.forEach(l=>{const row=document.createElement('button');row.className='workspaceRow linkItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">From page ${l.from?.page||'?'} → page ${l.to?.page||'?'}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=l.title||'Link';row.onclick=()=>jumpToContext(l.to);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('link',l.id,e);workspaceBody.appendChild(row);});}}
 function renderCollectionItems(col){workspaceBody.innerHTML='';const back=document.createElement('button');back.className='workspaceRow';back.innerHTML='<div><div class="workspaceRowTitle">‹ Back to collections</div></div><span></span>';back.onclick=()=>renderWorkspace();workspaceBody.appendChild(back);(col.items||[]).forEach(item=>{const ir=document.createElement('button');ir.className='workspaceRow collectionItem';ir.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${item.context?.page||'?'} ${item.index?('• '+item.index):''}</div></div><button class="workspaceDelete">×</button>`;ir.querySelector('.workspaceRowTitle').textContent=item.title||'Part reference';ir.onclick=()=>jumpToContext(item.context);ir.querySelector('.workspaceDelete').onclick=(e)=>{e.stopPropagation();col.items=col.items.filter(x=>x.id!==item.id);saveWorkspace();renderWorkspace();renderObjectMarkers();};workspaceBody.appendChild(ir);});}
@@ -1940,7 +2084,7 @@ async function renderPage(n){
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
-  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();updateSelectedIndexStatus();updateIndexActionCard();renderObjectMarkers();rendering=false;
+  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();updateSelectedIndexStatus();updateIndexActionCard();renderIndexAssocMarkers();renderObjectMarkers();rendering=false;
   if(n===pageNum){viewer.scrollLeft=(zoomFactor>1.01?oldX:0); viewer.scrollTop=oldY;}
   savePlace();
 }
