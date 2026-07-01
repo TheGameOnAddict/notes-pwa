@@ -1103,6 +1103,143 @@ body.editing #indexAssocMarkers{
   display:none !important;
 }
 
+
+/* v46: page notes + collection guide cards */
+#addNoteBtn{
+  display:block !important;
+  background:rgba(191,90,242,.20)!important;
+}
+#workspaceActions{
+  grid-template-columns:1fr 1fr !important;
+}
+#addCurrentPartBtn,#addLinkBtn{
+  display:none !important;
+}
+#pageNoteMarker{
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:10;
+}
+.pageNoteBtn{
+  position:absolute;
+  top:7px;
+  right:7px;
+  border:0;
+  border-radius:999px;
+  background:rgba(191,90,242,.86);
+  color:white;
+  min-width:34px;
+  height:26px;
+  padding:0 8px;
+  font-size:12px;
+  font-weight:900;
+  box-shadow:0 3px 11px rgba(0,0,0,.28);
+  pointer-events:auto;
+}
+.pageNoteBtn::before{
+  content:"";
+  display:inline-block;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:white;
+  margin-right:5px;
+  vertical-align:1px;
+}
+body.copying #pageNoteMarker,
+body.editing #pageNoteMarker{
+  display:none !important;
+}
+.collectionHeaderCard{
+  border-radius:18px;
+  background:rgba(255,255,255,.08);
+  padding:10px;
+  margin-bottom:8px;
+}
+.collectionHeaderTitle{
+  font-size:15px;
+  font-weight:900;
+}
+.collectionHeaderMeta{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:740;
+}
+.collectionHeaderActions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-top:8px;
+}
+.collectionHeaderActions button,
+.collectionCardActions button,
+.collectionLinkBtn{
+  border:0;
+  border-radius:14px;
+  background:rgba(255,255,255,.10);
+  color:var(--text);
+  padding:8px 7px;
+  font-size:11px;
+  font-weight:850;
+}
+.collectionCard{
+  border-radius:18px;
+  background:rgba(255,255,255,.08);
+  border-left:3px solid rgba(255,214,10,.75);
+  padding:10px;
+  margin-bottom:8px;
+}
+.collectionCard.guideNote{
+  border-left-color:rgba(191,90,242,.90);
+}
+.collectionCardTitle{
+  font-size:13px;
+  font-weight:900;
+  line-height:1.22;
+}
+.collectionCardMeta{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:740;
+}
+.collectionCardNotes{
+  margin-top:7px;
+  display:grid;
+  gap:5px;
+}
+.collectionCardNote{
+  border-radius:12px;
+  background:rgba(191,90,242,.13);
+  color:var(--text);
+  padding:7px;
+  font-size:12px;
+  line-height:1.25;
+}
+.collectionCardLinks{
+  margin-top:7px;
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+}
+.collectionLinkBtn{
+  background:rgba(10,132,255,.18);
+}
+.collectionCardActions{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 34px;
+  gap:6px;
+  margin-top:8px;
+}
+.collectionCardDelete{
+  color:#ffb4b4!important;
+}
+
 </style>
 </head>
 <body>
@@ -1131,6 +1268,7 @@ body.editing #indexAssocMarkers{
       <canvas id="draw"></canvas>
       <div id="objectMarkers"></div>
       <div id="indexAssocMarkers"></div>
+      <div id="pageNoteMarker"></div>
     </div>
     <div id="empty" class="frost">
       <div id="emptyIcon">📄</div>
@@ -1153,10 +1291,10 @@ body.editing #indexAssocMarkers{
       <div id="workspaceActions">
         <button id="addCollectionBtn">+ New Collection</button>
         <button id="addCurrentPartBtn">+ Current Index</button>
-        <button id="addNoteBtn">+ Note</button>
+        <button id="addNoteBtn">+ Page Note</button>
         <button id="addLinkBtn">+ Link</button>
       </div>
-      <div id="selectedIndexStatus">Add notes, collection items, and links from the Index card.</div>
+      <div id="selectedIndexStatus">Workspace is for viewing saved items. Add index items from the Index card, or add a general page note here.</div>
       <div id="workspaceBody"></div>
     </div>
 
@@ -1281,7 +1419,7 @@ let pinnedIndexes={}; // session only
 let outlineItems=[];
 let searchQuery='', searchResults=[], currentSearchIndex=-1, searchToken=0;
 let bookmarks=[];
-let workspaceData={collections:[],notes:[],links:[]}, workspaceTab='collections', pendingCollectionItem=null, editingNoteId=null, lastSelectedIndex=null;
+let workspaceData={collections:[],notes:[],links:[]}, workspaceTab='collections', pendingCollectionItem=null, editingNoteId=null, pendingNoteContext=null, lastSelectedIndex=null;
 let pageLinesByPage={};
 let copyLineStart=0, copyLineEnd=0, copyCharStartVal=0, copyCharEndVal=0;
 let zoomFactor=1; // 1 = fit width
@@ -1515,10 +1653,10 @@ function lineGroups(chunks){
   });
   return lines;
 }
-async function scanIndexesForPage(){
+async function scanIndexesForPage(silent=false){
   if(!doc) return;
   const key=pageKey();
-  if(indexItemsByPage[key]){renderIndexCarousel();renderPreview();renderTextHighlights();renderIndexAssocMarkers();return;}
+  if(indexItemsByPage[key]){renderIndexCarousel();renderPreview();renderTextHighlights();renderIndexAssocMarkers();renderPageNoteMarker();return;}
   const page=await doc.getPage(pageNum);
   const content=await page.getTextContent();
   const base=page.getViewport({scale:1});
@@ -1537,7 +1675,7 @@ async function scanIndexesForPage(){
     return {label:h.label,y:itemLines[0]?.y||h.y,lines:itemLines,selectedLines:[...Array(end-start).keys()],rects:itemLines.flatMap(l=>l.rects)};
   });
   indexItemsByPage[key]=items;
-  renderIndexCarousel(); toast(items.length?`Found ${items.length} indexes`:'No indexes found'); renderPreview(); renderTextHighlights();
+  renderIndexCarousel(); if(!silent) toast(items.length?`Found ${items.length} indexes`:'No indexes found'); renderPreview(); renderTextHighlights(); renderIndexAssocMarkers();
 }
 function renderIndexCarousel(){
   const items=indexItemsByPage[pageKey()]||[]; indexTrack.innerHTML='';
@@ -1779,6 +1917,73 @@ async function copyCurrentSelection(){
 
 
 
+
+function pageNotesForPage(page=pageNum){
+  return (workspaceData.notes||[]).filter(n=>n.context?.page===page && !n.context?.index);
+}
+function pageHasIndexWorkspaceItems(page=pageNum){
+  let found=false;
+  (workspaceData.notes||[]).forEach(n=>{if(n.context?.page===page && n.context?.index) found=true;});
+  (workspaceData.links||[]).forEach(l=>{if(l.from?.page===page && l.from?.index) found=true;});
+  (workspaceData.collections||[]).forEach(c=>(c.items||[]).forEach(i=>{if(i.context?.page===page && i.index) found=true;}));
+  return found;
+}
+function currentPageContext(){
+  return {page:pageNum,zoom:zoomFactor,sx:viewer.scrollLeft||0,sy:viewer.scrollTop||0,index:null,chapter:(typeof bookmarkLabelForCurrent==='function'?bookmarkLabelForCurrent():`Page ${pageNum}`)};
+}
+function openPageNoteEditor(){
+  pendingNoteContext=currentPageContext();
+  openNoteEditor(null,'Page Note');
+}
+function renderPageNoteMarker(){
+  if(typeof pageNoteMarker==='undefined') return;
+  pageNoteMarker.innerHTML='';
+  if(!doc || stage.hidden) return;
+  const notes=pageNotesForPage(pageNum);
+  if(!notes.length) return;
+  pageNoteMarker.style.width=drawCanvas.clientWidth+'px';
+  pageNoteMarker.style.height=drawCanvas.clientHeight+'px';
+  const b=document.createElement('button');
+  b.className='pageNoteBtn';
+  b.textContent=notes.length;
+  b.onclick=(e)=>{e.stopPropagation();openPageNotesList();};
+  pageNoteMarker.appendChild(b);
+}
+function openPageNotesList(){
+  const notes=pageNotesForPage(pageNum);
+  setWorkspaceMode(true);
+  workspaceBody.innerHTML='';
+  const back=document.createElement('button');
+  back.className='workspaceRow';
+  back.innerHTML=`<div><div class="workspaceRowTitle">Page ${pageNum} notes</div><div class="workspaceRowMeta">General notes not tied to an index</div></div><span></span>`;
+  back.onclick=()=>renderWorkspace();
+  workspaceBody.appendChild(back);
+  notes.forEach(n=>{
+    const row=document.createElement('button');
+    row.className='workspaceRow noteItem';
+    row.innerHTML='<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Tap to edit</div></div><button class="workspaceDelete">×</button>';
+    row.querySelector('.workspaceRowTitle').textContent=n.text;
+    row.onclick=()=>openNoteEditor(n.id,'Page Note');
+    row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('note',n.id,e);
+    workspaceBody.appendChild(row);
+  });
+}
+function ensureCollectionItemFields(item){
+  item.notes ||= [];
+  item.links ||= [];
+  item.title ||= item.text || 'Reference';
+  return item;
+}
+function normalizeWorkspaceData(){
+  workspaceData.collections ||= [];
+  workspaceData.notes ||= [];
+  workspaceData.links ||= [];
+  workspaceData.collections.forEach(c=>{
+    c.items ||= [];
+    c.items.forEach(ensureCollectionItemFields);
+  });
+}
+
 function workspaceItemsForIndex(label, page=pageNum){
   const result={notes:[],collections:[],links:[]};
   if(!label) return result;
@@ -1951,7 +2156,7 @@ function addPendingItemToCollection(col){
   if(!pendingCollectionItem || !col) return;
   col.items ||= [];
   const exists=col.items.some(i=>i.context?.page===pendingCollectionItem.context.page && i.index===pendingCollectionItem.index && i.title===pendingCollectionItem.title);
-  if(!exists) col.items.unshift({...pendingCollectionItem,id:uid('part')});
+  if(!exists) col.items.unshift(ensureCollectionItemFields({...pendingCollectionItem,id:uid('part')}));
   saveWorkspace();
   renderCollectionPicker();
   renderWorkspace();
@@ -1980,7 +2185,7 @@ function loadWorkspace(){
   if(!pdfKey){workspaceData={collections:[],notes:[],links:[]};return;}
   try{workspaceData=JSON.parse(localStorage.getItem('workspace_'+pdfKey)||'null')||{collections:[],notes:[],links:[]};}
   catch{workspaceData={collections:[],notes:[],links:[]};}
-  workspaceData.collections ||= []; workspaceData.notes ||= []; workspaceData.links ||= [];
+  normalizeWorkspaceData();
 }
 function saveWorkspace(){if(pdfKey)localStorage.setItem('workspace_'+pdfKey,JSON.stringify(workspaceData));}
 function uid(prefix='id'){return prefix+'_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
@@ -1989,12 +2194,12 @@ function currentIndexText(){const sel=getSelectedIndexForWorkspace();if(sel?.lin
 function setWorkspaceMode(on){closePanels(on?'workspace':'');document.body.classList.toggle('workspaceOpen',on);if(on){updateSelectedIndexStatus();renderWorkspace();renderObjectMarkers();}}
 function setWorkspaceTab(tab){workspaceTab=tab;[tabCollections,tabNotes,tabLinks].forEach(b=>b.classList.remove('active'));({collections:tabCollections,notes:tabNotes,links:tabLinks}[tab])?.classList.add('active');renderWorkspace();}
 async function jumpToContext(ctx){if(!ctx||!doc)return;pageNum=Math.max(1,Math.min(doc.numPages,ctx.page||pageNum));zoomFactor=Math.max(.75,Math.min(3,ctx.zoom||1));updateZoomLabel();document.body.classList.remove('workspaceOpen','noteEditing','collectionPicking');await renderPage(pageNum);requestAnimationFrame(()=>{viewer.scrollLeft=ctx.sx||0;viewer.scrollTop=ctx.sy||0;});}
-function createCollection(){const name=prompt('Collection name?','New Collection');if(!name)return;createCollectionObject(name);saveWorkspace();renderWorkspace();renderCollectionPicker();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();toast('Collection created');}
+function createCollection(){const name=prompt('Collection name?','New Collection');if(!name)return;createCollectionObject(name);saveWorkspace();renderWorkspace();renderCollectionPicker();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();renderPageNoteMarker();toast('Collection created');}
 function addCurrentPartToCollection(){
   if(!doc) return;
   const sel=activeIndex || getSelectedIndexForWorkspace();
   if(!sel){toast('Select an index first');return;}
-  pendingCollectionItem={id:uid('part'),type:'part',title:(sel?.label?`${sel.label} ${currentIndexText()}`:currentIndexText()).slice(0,90),index:sel?.label||null,context:currentContext(),created:new Date().toISOString()};
+  pendingCollectionItem={id:uid('part'),type:'part',title:(sel?.label?`${sel.label} ${currentIndexText()}`:currentIndexText()).slice(0,120),index:sel?.label||null,context:currentContext(),notes:[],links:[],created:new Date().toISOString()};
   renderCollectionPicker();
   document.body.classList.add('collectionPicking');
 }
@@ -2012,12 +2217,146 @@ function renderCollectionPicker(){
     collectionPickerList.appendChild(b);
   });
 }
-function openNoteEditor(id=null){editingNoteId=id;const note=id?workspaceData.notes.find(n=>n.id===id):null;noteEditorTitle.textContent=id?'Edit Note':'New Note';noteTextInput.value=note?.text||'';document.body.classList.add('noteEditing');setTimeout(()=>noteTextInput.focus(),50);}
-function saveNote(){const text=noteTextInput.value.trim();if(!text){toast('Note is empty');return;}if(editingNoteId){const n=workspaceData.notes.find(x=>x.id===editingNoteId);if(n){n.text=text;n.updated=new Date().toISOString();}}else{workspaceData.notes.unshift({id:uid('note'),text,context:currentContext(),attachedTo:getSelectedIndexForWorkspace()?.label?'index':'page',created:new Date().toISOString()});}saveWorkspace();document.body.classList.remove('noteEditing');renderWorkspace();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();toast('Note saved');}
-function addLink(){const dest=prompt('Link destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Link label?','Link')||'Link';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();toast('Link created');}
-function deleteWorkspaceObject(type,id,e){if(e){e.stopPropagation();e.preventDefault();}if(type==='collection')workspaceData.collections=workspaceData.collections.filter(x=>x.id!==id);if(type==='note')workspaceData.notes=workspaceData.notes.filter(x=>x.id!==id);if(type==='link')workspaceData.links=workspaceData.links.filter(x=>x.id!==id);saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Deleted');}
+function openNoteEditor(id=null,title='New Note'){
+  editingNoteId=id;
+  const note=id?workspaceData.notes.find(n=>n.id===id):null;
+  if(id && note) pendingNoteContext=note.context;
+  noteEditorTitle.textContent=id?'Edit Note':title;
+  noteTextInput.value=note?.text||'';
+  document.body.classList.add('noteEditing');
+  setTimeout(()=>noteTextInput.focus(),50);
+}
+function saveNote(){
+  const text=noteTextInput.value.trim();
+  if(!text){toast('Note is empty');return;}
+  if(editingNoteId){
+    const n=workspaceData.notes.find(x=>x.id===editingNoteId);
+    if(n){n.text=text;n.updated=new Date().toISOString();}
+  }else{
+    const ctx=pendingNoteContext || currentContext();
+    workspaceData.notes.unshift({
+      id:uid('note'),
+      text,
+      context:ctx,
+      attachedTo:ctx.index?'index':'page',
+      created:new Date().toISOString()
+    });
+  }
+  pendingNoteContext=null;
+  saveWorkspace();
+  document.body.classList.remove('noteEditing');
+  renderWorkspace();
+  renderIndexCarousel();
+  renderPreview();
+  renderIndexAssocMarkers();
+  renderPageNoteMarker();
+  toast('Note saved');
+}
+function addLink(){const dest=prompt('Link destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Link label?','Link')||'Link';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderIndexCarousel();renderPreview();renderIndexAssocMarkers();renderPageNoteMarker();toast('Link created');}
+function deleteWorkspaceObject(type,id,e){if(e){e.stopPropagation();e.preventDefault();}if(type==='collection')workspaceData.collections=workspaceData.collections.filter(x=>x.id!==id);if(type==='note')workspaceData.notes=workspaceData.notes.filter(x=>x.id!==id);if(type==='link')workspaceData.links=workspaceData.links.filter(x=>x.id!==id);saveWorkspace();renderWorkspace();renderIndexAssocMarkers();renderPageNoteMarker();renderObjectMarkers();toast('Deleted');}
 function renderWorkspace(){if(typeof workspaceBody==='undefined')return;workspaceBody.innerHTML='';if(workspaceTab==='collections'){if(!workspaceData.collections.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No collections yet.</div>';return;}workspaceData.collections.forEach(col=>{const row=document.createElement('button');row.className='workspaceRow collectionItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">${col.items?.length||0} items</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=col.name;row.onclick=()=>renderCollectionItems(col);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('collection',col.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='notes'){if(!workspaceData.notes.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No notes yet.</div>';return;}workspaceData.notes.forEach(n=>{const row=document.createElement('button');row.className='workspaceRow noteItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${n.context?.page||'?'} ${n.context?.index?('• '+n.context.index):''}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=n.text;row.onclick=()=>jumpToContext(n.context);row.ondblclick=()=>openNoteEditor(n.id);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('note',n.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='links'){if(!workspaceData.links.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No links yet.</div>';return;}workspaceData.links.forEach(l=>{const row=document.createElement('button');row.className='workspaceRow linkItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">From page ${l.from?.page||'?'} → page ${l.to?.page||'?'}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=l.title||'Link';row.onclick=()=>jumpToContext(l.to);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('link',l.id,e);workspaceBody.appendChild(row);});}}
-function renderCollectionItems(col){workspaceBody.innerHTML='';const back=document.createElement('button');back.className='workspaceRow';back.innerHTML='<div><div class="workspaceRowTitle">‹ Back to collections</div></div><span></span>';back.onclick=()=>renderWorkspace();workspaceBody.appendChild(back);(col.items||[]).forEach(item=>{const ir=document.createElement('button');ir.className='workspaceRow collectionItem';ir.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${item.context?.page||'?'} ${item.index?('• '+item.index):''}</div></div><button class="workspaceDelete">×</button>`;ir.querySelector('.workspaceRowTitle').textContent=item.title||'Part reference';ir.onclick=()=>jumpToContext(item.context);ir.querySelector('.workspaceDelete').onclick=(e)=>{e.stopPropagation();col.items=col.items.filter(x=>x.id!==item.id);saveWorkspace();renderWorkspace();renderObjectMarkers();};workspaceBody.appendChild(ir);});}
+function addGuideNoteToCollection(col){
+  const text=prompt('Guide note for this collection?');
+  if(!text) return;
+  col.items ||= [];
+  col.items.unshift({id:uid('guide'),type:'guideNote',title:'Guide Note',text,notes:[],links:[],created:new Date().toISOString()});
+  saveWorkspace();
+  renderCollectionItems(col);
+  toast('Guide note added');
+}
+function addCollectionItemNote(col,item){
+  const text=prompt('Note for this collection item?');
+  if(!text) return;
+  ensureCollectionItemFields(item);
+  item.notes.unshift({id:uid('cinote'),text,created:new Date().toISOString()});
+  saveWorkspace();
+  renderCollectionItems(col);
+  toast('Item note added');
+}
+function addCollectionItemLink(col,item){
+  const dest=prompt('Link this collection item to page number?', String(item.context?.page||pageNum));
+  if(!dest) return;
+  const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));
+  const label=prompt('Link label?','Related page')||'Related page';
+  ensureCollectionItemFields(item);
+  item.links.unshift({id:uid('cilink'),title:label,to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});
+  saveWorkspace();
+  renderCollectionItems(col);
+  toast('Item link added');
+}
+function renderCollectionItems(col){
+  workspaceBody.innerHTML='';
+  const header=document.createElement('div');
+  header.className='collectionHeaderCard';
+  header.innerHTML=`<div class="collectionHeaderTitle"></div><div class="collectionHeaderMeta">${col.items?.length||0} guide items / part references</div>
+    <div class="collectionHeaderActions"><button id="collectionBackBtn">‹ Back</button><button id="collectionGuideNoteBtn">+ Guide Note</button></div>`;
+  header.querySelector('.collectionHeaderTitle').textContent=col.name;
+  workspaceBody.appendChild(header);
+  header.querySelector('#collectionBackBtn').onclick=()=>renderWorkspace();
+  header.querySelector('#collectionGuideNoteBtn').onclick=()=>addGuideNoteToCollection(col);
+
+  if(!(col.items||[]).length){
+    const empty=document.createElement('div');
+    empty.style.cssText='padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;';
+    empty.textContent='No items yet. Add indexes from the Index card or add a guide note.';
+    workspaceBody.appendChild(empty);
+    return;
+  }
+
+  (col.items||[]).forEach(item=>{
+    ensureCollectionItemFields(item);
+    const card=document.createElement('div');
+    card.className='collectionCard '+(item.type==='guideNote'?'guideNote':'');
+    const isGuide=item.type==='guideNote';
+    card.innerHTML=`
+      <div class="collectionCardTitle"></div>
+      <div class="collectionCardMeta"></div>
+      <div class="collectionCardNotes"></div>
+      <div class="collectionCardLinks"></div>
+      <div class="collectionCardActions">
+        <button class="openRefBtn">${isGuide?'Edit':'Open Ref'}</button>
+        <button class="addItemNoteBtn">Note</button>
+        <button class="addItemLinkBtn">${isGuide?'Page Link':'Link'}</button>
+        <button class="collectionCardDelete">×</button>
+      </div>`;
+    card.querySelector('.collectionCardTitle').textContent=isGuide?(item.text||item.title||'Guide Note'):(item.title||'Part reference');
+    card.querySelector('.collectionCardMeta').textContent=isGuide?'Collection guide note':`Page ${item.context?.page||'?'} ${item.index?('• '+item.index):''} • ${item.notes.length} notes • ${item.links.length} links`;
+
+    const notesBox=card.querySelector('.collectionCardNotes');
+    item.notes.slice(0,3).forEach(n=>{
+      const d=document.createElement('div');
+      d.className='collectionCardNote';
+      d.textContent=n.text;
+      notesBox.appendChild(d);
+    });
+
+    const linksBox=card.querySelector('.collectionCardLinks');
+    item.links.slice(0,4).forEach(l=>{
+      const b=document.createElement('button');
+      b.className='collectionLinkBtn';
+      b.textContent=l.title||`Page ${l.to?.page||'?'}`;
+      b.onclick=()=>jumpToContext(l.to);
+      linksBox.appendChild(b);
+    });
+
+    card.querySelector('.openRefBtn').onclick=()=>{
+      if(isGuide){
+        const text=prompt('Edit guide note', item.text||'');
+        if(text!==null){item.text=text;saveWorkspace();renderCollectionItems(col);}
+      }else jumpToContext(item.context);
+    };
+    card.querySelector('.addItemNoteBtn').onclick=()=>addCollectionItemNote(col,item);
+    card.querySelector('.addItemLinkBtn').onclick=()=>addCollectionItemLink(col,item);
+    card.querySelector('.collectionCardDelete').onclick=()=>{
+      col.items=col.items.filter(x=>x.id!==item.id);
+      saveWorkspace();
+      renderCollectionItems(col);
+      renderIndexAssocMarkers();
+      toast('Removed from collection');
+    };
+    workspaceBody.appendChild(card);
+  });
+}
 function markerY(ctx){if(!ctx)return 12;if(ctx.index){const item=(indexItemsByPage[String(ctx.page)]||[]).find(i=>i.label===ctx.index);if(item)return Math.max(10,item.y*drawCanvas.clientHeight);}return 16+((ctx.page||1)%10)*28;}
 
 function renderObjectMarkers(){ if(typeof objectMarkers!=='undefined') objectMarkers.innerHTML=''; }
@@ -2234,8 +2573,8 @@ async function renderPage(n){
   titleSub.textContent=`Page ${pageNum} of ${doc.numPages} • ${Math.round(zoomFactor*100)}%`;
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
   activeIndex=null;clearTextHighlights();renderPreview();
-  if(indexMode) await scanIndexesForPage();
-  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();updateSelectedIndexStatus();updateIndexActionCard();renderIndexAssocMarkers();renderObjectMarkers();rendering=false;
+  if(indexMode || pageHasIndexWorkspaceItems(pageNum)) await scanIndexesForPage(!indexMode);
+  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();updateSelectedIndexStatus();updateIndexActionCard();renderIndexAssocMarkers();renderPageNoteMarker();renderObjectMarkers();rendering=false;
   if(n===pageNum){viewer.scrollLeft=(zoomFactor>1.01?oldX:0); viewer.scrollTop=oldY;}
   savePlace();
 }
@@ -2281,7 +2620,7 @@ idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
 
 
 
-indexNoteBtn.onclick=(e)=>{e.stopPropagation(); if(!activeIndex){toast('Select an index first');return;} rememberSelectedIndex(activeIndex); openNoteEditor();};
+indexNoteBtn.onclick=(e)=>{e.stopPropagation(); if(!activeIndex){toast('Select an index first');return;} rememberSelectedIndex(activeIndex); pendingNoteContext=currentContext(); openNoteEditor(null,'Index Note');};
 indexCollectBtn.onclick=(e)=>{e.stopPropagation(); if(!activeIndex){toast('Select an index first');return;} rememberSelectedIndex(activeIndex); addCurrentPartToCollection();};
 indexLinkBtn.onclick=(e)=>{e.stopPropagation(); if(!activeIndex){toast('Select an index first');return;} rememberSelectedIndex(activeIndex); addLink();};
 indexPinBtn.onclick=(e)=>{e.stopPropagation(); toggleSelectedPin();};
@@ -2294,9 +2633,9 @@ tabNotes.onclick=()=>setWorkspaceTab('notes');
 tabLinks.onclick=()=>setWorkspaceTab('links');
 addCollectionBtn.onclick=()=>createCollection();
 addCurrentPartBtn.onclick=()=>addCurrentPartToCollection();
-addNoteBtn.onclick=()=>openNoteEditor();
+addNoteBtn.onclick=()=>openPageNoteEditor();
 addLinkBtn.onclick=()=>addLink();
-noteCancelBtn.onclick=()=>document.body.classList.remove('noteEditing');
+noteCancelBtn.onclick=()=>{pendingNoteContext=null;document.body.classList.remove('noteEditing');};
 noteSaveBtn.onclick=()=>saveNote();
 collectionPickerClose.onclick=()=>{document.body.classList.remove('collectionPicking');pendingCollectionItem=null;};
 

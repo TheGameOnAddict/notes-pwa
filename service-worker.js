@@ -1,4 +1,4 @@
-const CACHE_NAME='ipseer-index-rail-v45-v1';
+const CACHE_NAME='ipseer-page-notes-collections-v46-v1';
 const APP_FILES=['./','index.html','manifest.json'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(APP_FILES)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim());});
