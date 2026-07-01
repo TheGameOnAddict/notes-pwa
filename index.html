@@ -963,6 +963,90 @@ body.refining #lineRefiner{
   margin-bottom:5px;
 }
 
+
+/* v44: clearer selected-index card */
+#indexPreview{
+  overflow:auto;
+}
+body.indexing #indexPreview{
+  max-height:40vh !important;
+}
+body.refining #indexPreview{
+  max-height:46vh !important;
+}
+#indexCardTop{
+  display:grid;
+  grid-template-columns:1fr 74px;
+  gap:8px;
+  align-items:center;
+}
+#indexCardText{
+  min-width:0;
+}
+#previewText{
+  font-size:14px;
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#indexRefineBtn{
+  border:0;
+  border-radius:15px;
+  background:rgba(255,255,255,.10);
+  color:var(--text);
+  padding:9px 6px;
+  font-size:12px;
+  font-weight:850;
+}
+body.refining #indexRefineBtn{
+  background:rgba(255,214,10,.24);
+  color:#ffe889;
+}
+body.refining #indexObjectSummary{
+  display:flex !important;
+}
+body.refining #indexActionRow{
+  display:grid !important;
+}
+body.refining #previewHint{
+  color:var(--muted) !important;
+}
+#lineRefiner{
+  max-height:0;
+  overflow:hidden;
+  transition:max-height .16s ease;
+}
+body.refining #lineRefiner{
+  max-height:150px !important;
+  overflow:auto !important;
+  margin-top:8px;
+  padding-bottom:4px;
+}
+body.refining #lineRefiner:before{
+  content:"Tap lines below to include/exclude them from this index highlight";
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:750;
+  margin:0 0 6px;
+}
+#indexActionRow{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+.indexAssocMarker{
+  gap:4px !important;
+  padding:3px 6px !important;
+}
+.indexAssocMarker .assocLabel{
+  font-size:10px;
+  font-weight:900;
+  color:rgba(255,255,255,.95);
+  line-height:1;
+}
+
 </style>
 </head>
 <body>
@@ -1083,8 +1167,13 @@ body.refining #lineRefiner{
     </div>
 
     <div id="indexPreview" class="frost">
-      <div id="previewText">No index selected</div>
-      <div id="previewHint">Tap this preview to refine highlighted lines</div>
+      <div id="indexCardTop">
+        <div id="indexCardText">
+          <div id="previewText">No index selected</div>
+          <div id="previewHint">Select an index, then add notes, collections, links, or pin it.</div>
+        </div>
+        <button id="indexRefineBtn">Refine</button>
+      </div>
       <div id="indexObjectSummary"></div>
       <div id="indexActionRow">
         <button id="indexNoteBtn">Note</button>
@@ -1176,7 +1265,7 @@ function setIndexMode(on){
   closePanels(on?'index':'');
   indexMode=on; refineMode=false;
   document.body.classList.toggle('indexing',indexMode);
-  document.body.classList.toggle('refining',false);
+  document.body.classList.toggle('refining',false);if(typeof indexRefineBtn!=='undefined') indexRefineBtn.textContent='Refine';
   if(indexMode) scanIndexesForPage();
   else activeIndex=null;
   renderTextHighlights();
@@ -1205,6 +1294,7 @@ function setRefineMode(on){
   if(!activeIndex) return;
   refineMode=on;
   document.body.classList.toggle('refining',refineMode);
+  if(typeof indexRefineBtn!=='undefined') indexRefineBtn.textContent=refineMode?'Done':'Refine';
   renderPreview();
 }
 function setTool(t){tool=t;rectTool.classList.toggle('active',t==='rect');circleTool.classList.toggle('active',t==='circle');eraseTool.classList.toggle('active',t==='erase')}
@@ -1328,14 +1418,14 @@ function renderTextHighlights(){
 function renderPreview(){
   if(!activeIndex){
     previewText.textContent='No index selected';
-    previewHint.textContent='Scroll or tap an index to select it';
+    previewHint.textContent='Scroll the index row or tap an index chip.';
     lineRefiner.innerHTML='';
     updateIndexActionCard();
     return;
   }
   const first=selectedIndexText(activeIndex);
   previewText.textContent=`${activeIndex.label}: ${first}`;
-  previewHint.textContent=refineMode?'Tap lines to include/exclude. Tap preview again to collapse.':'Use the buttons below to add a note, collection item, link, or pinned highlight.';
+  previewHint.textContent=refineMode?'Refine mode is on. Actions stay available above.':'Use the buttons below to add a note, collection item, link, or pinned highlight.';
   updateIndexActionCard();
   lineRefiner.innerHTML='';
   if(!refineMode) return;
@@ -1348,7 +1438,7 @@ function renderPreview(){
     lineRefiner.appendChild(b);
   });
 }
-indexPreview.onclick=()=>setRefineMode(!refineMode);
+indexRefineBtn.onclick=(e)=>{e.stopPropagation();setRefineMode(!refineMode);};
 
 function styleCarousel(){
   const chips=[...indexTrack.children]; if(!chips.length) return;
@@ -1372,7 +1462,7 @@ function lineGroups(chunks){
 async function scanIndexesForPage(){
   if(!doc) return;
   const key=pageKey();
-  if(indexItemsByPage[key]){renderIndexCarousel();renderPreview();renderTextHighlights();return;}
+  if(indexItemsByPage[key]){renderIndexCarousel();renderPreview();renderTextHighlights();renderIndexAssocMarkers();return;}
   const page=await doc.getPage(pageNum);
   const content=await page.getTextContent();
   const base=page.getViewport({scale:1});
@@ -1684,7 +1774,7 @@ function renderIndexAssocMarkers(){
     if(hasNote) dots+='<span class="miniDot note"></span>';
     if(hasCollection) dots+='<span class="miniDot collection"></span>';
     if(hasLink) dots+='<span class="miniDot link"></span>';
-    marker.innerHTML=dots;
+    marker.innerHTML=`<span class="assocLabel">${it.label}</span>${dots}`;
 
     // Put the marker next to the exact index line. If there is no room, keep it inside the page.
     const rawLeft=(r.x+r.w)*W+5;
