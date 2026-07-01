@@ -781,6 +781,51 @@ body.bookmarking #bookmarkPanel{display:block}
   border:0;width:34px;height:34px;border-radius:14px;background:rgba(255,255,255,.10);color:var(--text);font-size:16px;
 }
 
+
+/* v40 Workspace */
+#topWorkspaceBtn{position:absolute;right:90px;top:50%;transform:translateY(-50%);font-size:18px}
+#topBookmarkBtn{right:48px !important}
+#topbar{padding-right:130px !important}
+body.workspaceOpen #topWorkspaceBtn{background:rgba(10,132,255,.22);color:#8ecaff}
+#workspacePanel,#noteEditorPanel,#collectionPickerPanel{
+  display:none;margin-bottom:8px;border-radius:25px;padding:10px;max-height:42vh;overflow:auto;
+}
+body.workspaceOpen #workspacePanel{display:block}
+body.noteEditing #noteEditorPanel{display:block}
+body.collectionPicking #collectionPickerPanel{display:block}
+#workspaceHeader{display:grid;grid-template-columns:1fr 36px;gap:8px;align-items:center;margin-bottom:8px}
+#workspaceTitle,#noteEditorTitle,#collectionPickerTitle{font-size:15px;font-weight:850;letter-spacing:-.02em}
+#workspaceSub{margin-top:2px;color:var(--muted);font-size:11px;font-weight:700}
+#workspaceCloseBtn{border:0;border-radius:17px;background:rgba(255,255,255,.10);color:var(--text);height:36px;font-size:20px;font-weight:900}
+#workspaceTabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;background:rgba(255,255,255,.07);border-radius:18px;padding:4px;margin-bottom:8px}
+.workspaceTab{border:0;border-radius:14px;background:transparent;color:var(--text);font-size:12px;font-weight:820;padding:8px 4px}
+.workspaceTab.active{background:rgba(255,255,255,.16)}
+#workspaceActions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+#workspaceActions button,#collectionPickerClose,#noteCancelBtn,#noteSaveBtn{
+  border:0;border-radius:16px;background:rgba(255,255,255,.10);color:var(--text);padding:9px 8px;font-size:12px;font-weight:850
+}
+#addCurrentPartBtn{background:rgba(255,214,10,.18)!important}
+#addNoteBtn{background:rgba(191,90,242,.20)!important}
+#addLinkBtn{background:rgba(10,132,255,.18)!important}
+.workspaceRow{width:100%;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:var(--text);text-align:left;padding:9px 10px;margin-bottom:6px;display:grid;grid-template-columns:1fr 34px;gap:8px;align-items:center}
+.workspaceRowTitle{font-size:13px;font-weight:830;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.workspaceRowMeta{color:var(--muted);font-size:11px;font-weight:700;margin-top:2px}
+.workspaceDelete{border:0;width:34px;height:34px;border-radius:14px;background:rgba(255,255,255,.10);color:var(--text);font-size:16px}
+.collectionItem{border-left:3px solid rgba(255,214,10,.75)}
+.noteItem{border-left:3px solid rgba(191,90,242,.85)}
+.linkItem{border-left:3px solid rgba(10,132,255,.85)}
+#noteTextInput{width:100%;min-height:105px;resize:none;outline:0;border:0;border-radius:18px;background:rgba(255,255,255,.10);color:var(--text);padding:10px;font-size:14px;line-height:1.3;margin-top:8px}
+#noteEditorActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+#noteSaveBtn{background:rgba(191,90,242,.25)!important}
+#collectionPickerList{margin-top:8px;max-height:28vh;overflow:auto}
+.collectionPickRow{width:100%;border:0;border-radius:15px;background:rgba(255,255,255,.08);color:var(--text);text-align:left;padding:10px;margin-bottom:6px;font-size:13px;font-weight:830}
+.collectionPickRow.active{background:rgba(255,214,10,.22)}
+#objectMarkers{position:absolute;left:0;top:0;pointer-events:none;z-index:8}
+.objectBadge{position:absolute;right:6px;width:24px;height:24px;border:0;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;color:white;pointer-events:auto;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.noteBadge{background:rgba(191,90,242,.95)}
+.collectionBadge{background:rgba(255,149,0,.95)}
+.linkBadge{background:rgba(10,132,255,.95)}
+
 </style>
 </head>
 <body>
@@ -793,6 +838,7 @@ body.bookmarking #bookmarkPanel{display:block}
         <div id="titleSub">Open a PDF</div>
         <input id="pageJump" type="number" inputmode="numeric" min="1" placeholder="Page">
       </div>
+      <button id="topWorkspaceBtn" class="iconBtn" disabled aria-label="Workspace">⌘</button>
       <button id="topBookmarkBtn" class="iconBtn" disabled aria-label="Bookmarks">☆</button>
       <button id="topZoomBtn" class="iconBtn" disabled aria-label="Zoom">🔍</button>
       <input id="file" type="file" accept="application/pdf">
@@ -806,6 +852,7 @@ body.bookmarking #bookmarkPanel{display:block}
       <div id="pinHi"></div>
       <div id="textLayer"></div>
       <canvas id="draw"></canvas>
+      <div id="objectMarkers"></div>
     </div>
     <div id="empty" class="frost">
       <div id="emptyIcon">📄</div>
@@ -815,6 +862,39 @@ body.bookmarking #bookmarkPanel{display:block}
   </div>
 
   <div id="bottomArea">
+    <div id="workspacePanel" class="frost">
+      <div id="workspaceHeader">
+        <div><div id="workspaceTitle">Workspace</div><div id="workspaceSub">Collections, notes, shortcuts</div></div>
+        <button id="workspaceCloseBtn">×</button>
+      </div>
+      <div id="workspaceTabs">
+        <button id="tabCollections" class="workspaceTab active">Collections</button>
+        <button id="tabNotes" class="workspaceTab">Notes</button>
+        <button id="tabLinks" class="workspaceTab">Links</button>
+      </div>
+      <div id="workspaceActions">
+        <button id="addCollectionBtn">+ Collection</button>
+        <button id="addCurrentPartBtn">+ Current Index</button>
+        <button id="addNoteBtn">+ Note</button>
+        <button id="addLinkBtn">+ Shortcut</button>
+      </div>
+      <div id="workspaceBody"></div>
+    </div>
+
+    <div id="noteEditorPanel" class="frost">
+      <div id="noteEditorTitle">New Note</div>
+      <textarea id="noteTextInput" placeholder="Write a note for this page/index..."></textarea>
+      <div id="noteEditorActions">
+        <button id="noteCancelBtn">Cancel</button>
+        <button id="noteSaveBtn">Save</button>
+      </div>
+    </div>
+
+    <div id="collectionPickerPanel" class="frost">
+      <div id="collectionPickerTitle">Add to collection</div>
+      <div id="collectionPickerList"></div>
+      <button id="collectionPickerClose">Done</button>
+    </div>
     <div id="bookmarkPanel" class="frost">
       <div id="bookmarkHeader">
         <div>
@@ -909,6 +989,7 @@ let pinnedIndexes={}; // session only
 let outlineItems=[];
 let searchQuery='', searchResults=[], currentSearchIndex=-1, searchToken=0;
 let bookmarks=[];
+let workspaceData={collections:[],notes:[],links:[]}, workspaceTab='collections', pendingCollectionItem=null, editingNoteId=null;
 let pageLinesByPage={};
 let copyLineStart=0, copyLineEnd=0, copyCharStartVal=0, copyCharEndVal=0;
 let zoomFactor=1; // 1 = fit width
@@ -932,6 +1013,7 @@ function closePanels(except=''){
   if(except!=='copy') { copyMode=false; document.body.classList.remove('copying'); clearCopyHighlightIfNeeded(); }
   if(except!=='search') { searchMode=false; document.body.classList.remove('searching'); }
   if(except!=='bookmark') { document.body.classList.remove('bookmarking'); }
+  if(except!=='workspace') { document.body.classList.remove('workspaceOpen','noteEditing','collectionPicking'); }
 }
 function setEditMode(on){
   editMode=on;
@@ -1391,6 +1473,32 @@ async function copyCurrentSelection(){
 
 
 
+
+function loadWorkspace(){
+  if(!pdfKey){workspaceData={collections:[],notes:[],links:[]};return;}
+  try{workspaceData=JSON.parse(localStorage.getItem('workspace_'+pdfKey)||'null')||{collections:[],notes:[],links:[]};}
+  catch{workspaceData={collections:[],notes:[],links:[]};}
+  workspaceData.collections ||= []; workspaceData.notes ||= []; workspaceData.links ||= [];
+}
+function saveWorkspace(){if(pdfKey)localStorage.setItem('workspace_'+pdfKey,JSON.stringify(workspaceData));}
+function uid(prefix='id'){return prefix+'_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
+function currentContext(){return {page:pageNum,zoom:zoomFactor,sx:viewer.scrollLeft||0,sy:viewer.scrollTop||0,index:activeIndex?.label||null,chapter:(typeof bookmarkLabelForCurrent==='function'?bookmarkLabelForCurrent():`Page ${pageNum}`)}}
+function currentIndexText(){if(activeIndex?.lines?.length)return activeIndex.lines[0].text||activeIndex.label;const lines=pageLinesByPage[pageKey()]||[];return lines[0]?.text||`Page ${pageNum}`}
+function setWorkspaceMode(on){closePanels(on?'workspace':'');document.body.classList.toggle('workspaceOpen',on);if(on){renderWorkspace();renderObjectMarkers();}}
+function setWorkspaceTab(tab){workspaceTab=tab;[tabCollections,tabNotes,tabLinks].forEach(b=>b.classList.remove('active'));({collections:tabCollections,notes:tabNotes,links:tabLinks}[tab])?.classList.add('active');renderWorkspace();}
+async function jumpToContext(ctx){if(!ctx||!doc)return;pageNum=Math.max(1,Math.min(doc.numPages,ctx.page||pageNum));zoomFactor=Math.max(.75,Math.min(3,ctx.zoom||1));updateZoomLabel();document.body.classList.remove('workspaceOpen','noteEditing','collectionPicking');await renderPage(pageNum);requestAnimationFrame(()=>{viewer.scrollLeft=ctx.sx||0;viewer.scrollTop=ctx.sy||0;});}
+function createCollection(){const name=prompt('Collection name?','New Collection');if(!name)return;workspaceData.collections.unshift({id:uid('col'),name,items:[],created:new Date().toISOString()});saveWorkspace();renderWorkspace();toast('Collection created');}
+function addCurrentPartToCollection(){if(!doc)return;pendingCollectionItem={id:uid('part'),type:'part',title:(activeIndex?.label?`${activeIndex.label} ${currentIndexText()}`:currentIndexText()).slice(0,90),index:activeIndex?.label||null,context:currentContext(),created:new Date().toISOString()};renderCollectionPicker();document.body.classList.add('collectionPicking');}
+function renderCollectionPicker(){collectionPickerList.innerHTML='';if(!workspaceData.collections.length){collectionPickerList.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;">Create a collection first.</div>';return;}workspaceData.collections.forEach(col=>{const b=document.createElement('button');b.className='collectionPickRow';b.textContent=`${col.name} (${col.items?.length||0})`;b.onclick=()=>{if(!pendingCollectionItem)return;col.items ||= [];col.items.unshift({...pendingCollectionItem,id:uid('part')});b.classList.add('active');saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Added to collection');};collectionPickerList.appendChild(b);});}
+function openNoteEditor(id=null){editingNoteId=id;const note=id?workspaceData.notes.find(n=>n.id===id):null;noteEditorTitle.textContent=id?'Edit Note':'New Note';noteTextInput.value=note?.text||'';document.body.classList.add('noteEditing');setTimeout(()=>noteTextInput.focus(),50);}
+function saveNote(){const text=noteTextInput.value.trim();if(!text){toast('Note is empty');return;}if(editingNoteId){const n=workspaceData.notes.find(x=>x.id===editingNoteId);if(n){n.text=text;n.updated=new Date().toISOString();}}else{workspaceData.notes.unshift({id:uid('note'),text,context:currentContext(),attachedTo:activeIndex?.label?'index':'page',created:new Date().toISOString()});}saveWorkspace();document.body.classList.remove('noteEditing');renderWorkspace();renderObjectMarkers();toast('Note saved');}
+function addLink(){const dest=prompt('Shortcut destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Shortcut label?','Shortcut')||'Shortcut';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Shortcut created');}
+function deleteWorkspaceObject(type,id,e){if(e){e.stopPropagation();e.preventDefault();}if(type==='collection')workspaceData.collections=workspaceData.collections.filter(x=>x.id!==id);if(type==='note')workspaceData.notes=workspaceData.notes.filter(x=>x.id!==id);if(type==='link')workspaceData.links=workspaceData.links.filter(x=>x.id!==id);saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Deleted');}
+function renderWorkspace(){if(typeof workspaceBody==='undefined')return;workspaceBody.innerHTML='';if(workspaceTab==='collections'){if(!workspaceData.collections.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No collections yet.</div>';return;}workspaceData.collections.forEach(col=>{const row=document.createElement('button');row.className='workspaceRow collectionItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">${col.items?.length||0} items</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=col.name;row.onclick=()=>renderCollectionItems(col);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('collection',col.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='notes'){if(!workspaceData.notes.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No notes yet.</div>';return;}workspaceData.notes.forEach(n=>{const row=document.createElement('button');row.className='workspaceRow noteItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${n.context?.page||'?'} ${n.context?.index?('• '+n.context.index):''}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=n.text;row.onclick=()=>jumpToContext(n.context);row.ondblclick=()=>openNoteEditor(n.id);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('note',n.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='links'){if(!workspaceData.links.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No shortcuts yet.</div>';return;}workspaceData.links.forEach(l=>{const row=document.createElement('button');row.className='workspaceRow linkItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">From page ${l.from?.page||'?'} → page ${l.to?.page||'?'}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=l.title||'Shortcut';row.onclick=()=>jumpToContext(l.to);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('link',l.id,e);workspaceBody.appendChild(row);});}}
+function renderCollectionItems(col){workspaceBody.innerHTML='';const back=document.createElement('button');back.className='workspaceRow';back.innerHTML='<div><div class="workspaceRowTitle">‹ Back to collections</div></div><span></span>';back.onclick=()=>renderWorkspace();workspaceBody.appendChild(back);(col.items||[]).forEach(item=>{const ir=document.createElement('button');ir.className='workspaceRow collectionItem';ir.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${item.context?.page||'?'} ${item.index?('• '+item.index):''}</div></div><button class="workspaceDelete">×</button>`;ir.querySelector('.workspaceRowTitle').textContent=item.title||'Part reference';ir.onclick=()=>jumpToContext(item.context);ir.querySelector('.workspaceDelete').onclick=(e)=>{e.stopPropagation();col.items=col.items.filter(x=>x.id!==item.id);saveWorkspace();renderWorkspace();renderObjectMarkers();};workspaceBody.appendChild(ir);});}
+function markerY(ctx){if(!ctx)return 12;if(ctx.index){const item=(indexItemsByPage[String(ctx.page)]||[]).find(i=>i.label===ctx.index);if(item)return Math.max(10,item.y*drawCanvas.clientHeight);}return 16+((ctx.page||1)%10)*28;}
+function renderObjectMarkers(){if(typeof objectMarkers==='undefined'||!stage||stage.hidden)return;objectMarkers.innerHTML='';objectMarkers.style.width=stage.clientWidth+'px';objectMarkers.style.height=stage.clientHeight+'px';const page=pageNum;const markers=[];workspaceData.notes.forEach(n=>{if(n.context?.page===page)markers.push({type:'note',ctx:n.context,label:'N',open:()=>openNoteEditor(n.id)});});workspaceData.links.forEach(l=>{if(l.from?.page===page)markers.push({type:'link',ctx:l.from,label:'↗',open:()=>jumpToContext(l.to)});});workspaceData.collections.forEach(c=>(c.items||[]).forEach(i=>{if(i.context?.page===page)markers.push({type:'collection',ctx:i.context,label:'＋',open:()=>setWorkspaceMode(true)});}));markers.forEach((m,idx)=>{const b=document.createElement('button');b.className='objectBadge '+(m.type==='note'?'noteBadge':m.type==='link'?'linkBadge':'collectionBadge');b.textContent=m.label;b.style.top=(markerY(m.ctx)+idx*4)+'px';b.onclick=(e)=>{e.stopPropagation();m.open();};objectMarkers.appendChild(b);});}
+
 function loadBookmarks(){
   if(!pdfKey){bookmarks=[];return;}
   try{bookmarks=JSON.parse(localStorage.getItem('bookmarks_'+pdfKey)||'[]')||[];}
@@ -1603,7 +1711,7 @@ async function renderPage(n){
   prev.disabled=pageNum<=1;next.disabled=pageNum>=doc.numPages;
   activeIndex=null;clearTextHighlights();renderPreview();
   if(indexMode) await scanIndexesForPage();
-  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();rendering=false;
+  drawAll(false);renderPinnedIndexHighlights();(searchMode?renderSearchHighlights():renderTextHighlights());updateBookmarkButton();renderObjectMarkers();rendering=false;
   if(n===pageNum){viewer.scrollLeft=(zoomFactor>1.01?oldX:0); viewer.scrollTop=oldY;}
   savePlace();
 }
@@ -1618,13 +1726,13 @@ function goNext(){if(doc&&pageNum<doc.numPages){pageNum++;renderPage(pageNum)}}
 openBtn.onclick=()=>file.click();
 file.onchange=async()=>{
   const f=file.files[0];if(!f)return;
-  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();loadBookmarks();pinnedIndexes={};indexItemsByPage={};
+  pdfKey=f.name;titleMain.textContent=f.name;loadShapes();loadBookmarks();loadWorkspace();pinnedIndexes={};indexItemsByPage={};
   doc=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
   const place=loadPlace();
   pageNum=Math.max(1,Math.min(doc.numPages,place?.page||1));
   zoomFactor=Math.max(.75,Math.min(3,place?.zoom||1));
   empty.hidden=true;stage.hidden=false;
-  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,searchBtn,topZoomBtn,topBookmarkBtn].forEach(b=>b.disabled=false);
+  [prev,next,rectTool,circleTool,eraseTool,editBtn,indexBtn,clearIndexBtn,chaptersBtn,copyBtn,searchBtn,topWorkspaceBtn,topZoomBtn,topBookmarkBtn].forEach(b=>b.disabled=false);
   setTool('rect');setEditMode(false);setIndexMode(false);setZoomMode(false);setChaptersMode(false);
   await loadChapters();
   updateZoomLabel();
@@ -1646,6 +1754,20 @@ zoomIn.onclick=()=>setZoom(zoomFactor+.25);
 zoomFit.onclick=()=>setZoom(1);
 idxPrev.onclick=()=>bumpIndex(-1);idxNext.onclick=()=>bumpIndex(1);
 
+
+
+topWorkspaceBtn.onclick=()=>setWorkspaceMode(!document.body.classList.contains('workspaceOpen'));
+workspaceCloseBtn.onclick=()=>setWorkspaceMode(false);
+tabCollections.onclick=()=>setWorkspaceTab('collections');
+tabNotes.onclick=()=>setWorkspaceTab('notes');
+tabLinks.onclick=()=>setWorkspaceTab('links');
+addCollectionBtn.onclick=()=>createCollection();
+addCurrentPartBtn.onclick=()=>addCurrentPartToCollection();
+addNoteBtn.onclick=()=>openNoteEditor();
+addLinkBtn.onclick=()=>addLink();
+noteCancelBtn.onclick=()=>document.body.classList.remove('noteEditing');
+noteSaveBtn.onclick=()=>saveNote();
+collectionPickerClose.onclick=()=>{document.body.classList.remove('collectionPicking');pendingCollectionItem=null;};
 
 topBookmarkBtn.onclick=()=>setBookmarkMode(!document.body.classList.contains('bookmarking'));
 bookmarkCloseBtn.onclick=()=>setBookmarkMode(false);
