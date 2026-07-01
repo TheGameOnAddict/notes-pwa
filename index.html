@@ -827,29 +827,22 @@ body.collectionPicking #collectionPickerPanel{display:block}
 .linkBadge{background:rgba(10,132,255,.95)}
 
 
-/* v41 workspace fixes */
+/* v41 workspace refinement */
+#workspaceSub::after{
+  content:"";
+}
 #selectedIndexStatus{
-  margin-bottom:8px;
-  border-radius:15px;
-  background:rgba(255,255,255,.075);
   color:var(--muted);
-  padding:8px 10px;
-  font-size:12px;
-  font-weight:760;
-  line-height:1.25;
-}
-#selectedIndexStatus.hasIndex{
-  color:var(--text);
-  background:rgba(255,214,10,.15);
-}
-.objectBadge{
-  right:7px !important;
+  font-size:11px;
+  font-weight:750;
+  margin:0 0 8px;
 }
 .objectBadge.clusterBadge{
-  width:28px;
-  height:28px;
-  font-size:11px;
-  background:rgba(80,84,96,.96);
+  background:rgba(60,64,76,.95);
+  min-width:24px;
+  padding:0 6px;
+  width:auto;
+  border-radius:999px;
 }
 
 </style>
@@ -898,7 +891,7 @@ body.collectionPicking #collectionPickerPanel{display:block}
         <button id="tabNotes" class="workspaceTab">Notes</button>
         <button id="tabLinks" class="workspaceTab">Links</button>
       </div>
-      <div id="selectedIndexStatus">No index selected. Open Index and center/tap an index first.</div>
+      <div id="selectedIndexStatus">Selected index: none</div>
       <div id="workspaceActions">
         <button id="addCollectionBtn">+ Collection</button>
         <button id="addCurrentPartBtn">+ Current Index</button>
@@ -1273,14 +1266,14 @@ function renderIndexCarousel(){
   const pins=pagePins();
   items.forEach((it,i)=>{
     const b=document.createElement('button'); b.className='indexChip'; b.textContent=it.label; if(pins.includes(it.label)) b.classList.add('pinned');
-    b.onclick=()=>{activeIndex=it;rememberSelectedIndex(it);const arr=pagePins();const idx=arr.indexOf(it.label);if(idx>=0) arr.splice(idx,1); else arr.push(it.label);renderIndexCarousel();renderPreview();renderTextHighlights();setTimeout(()=>{indexTrack.children[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});styleCarousel();},20);toast(idx>=0?`${it.label} unpinned`:`${it.label} pinned`);};
+    b.onclick=()=>{activeIndex=it;const arr=pagePins();const idx=arr.indexOf(it.label);if(idx>=0) arr.splice(idx,1); else arr.push(it.label);renderIndexCarousel();renderPreview();renderTextHighlights();setTimeout(()=>{indexTrack.children[i]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});styleCarousel();},20);toast(idx>=0?`${it.label} unpinned`:`${it.label} pinned`);};
     indexTrack.appendChild(b);
   });
   setTimeout(styleCarousel,30);
 }
 let scrollTimer=null;
 indexTrack.addEventListener('scroll',()=>{styleCarousel();clearTimeout(scrollTimer);scrollTimer=setTimeout(styleCarousel,80);});
-function bumpIndex(dir){const items=indexItemsByPage[pageKey()]||[]; if(!items.length)return; let i=activeIndex?items.findIndex(x=>x.label===activeIndex.label):-1; i=(i+dir+items.length)%items.length; activeIndex=items[i]; rememberSelectedIndex(activeIndex); const chip=indexTrack.children[i]; if(chip) chip.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); setTimeout(()=>{styleCarousel();renderPreview();renderTextHighlights();},120);}
+function bumpIndex(dir){const items=indexItemsByPage[pageKey()]||[]; if(!items.length)return; let i=activeIndex?items.findIndex(x=>x.label===activeIndex.label):-1; i=(i+dir+items.length)%items.length; activeIndex=items[i]; const chip=indexTrack.children[i]; if(chip) chip.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}); setTimeout(()=>{styleCarousel();renderPreview();renderTextHighlights();},120);}
 
 async function renderTextLayer(page, displayScale){
   textLayer.innerHTML='';
@@ -1510,45 +1503,38 @@ function loadWorkspace(){
 }
 function saveWorkspace(){if(pdfKey)localStorage.setItem('workspace_'+pdfKey,JSON.stringify(workspaceData));}
 function uid(prefix='id'){return prefix+'_'+Date.now()+'_'+Math.random().toString(16).slice(2)}
-function currentContext(){const s=selectedIndexInfo();return {page:pageNum,zoom:zoomFactor,sx:viewer.scrollLeft||0,sy:viewer.scrollTop||0,index:s?.label||null,indexText:s?.text||null,indexY:s?.y||null,chapter:(typeof bookmarkLabelForCurrent==='function'?bookmarkLabelForCurrent():`Page ${pageNum}`)}}
-function currentIndexText(){const s=selectedIndexInfo();if(s?.text)return s.text;if(activeIndex?.lines?.length)return activeIndex.lines[0].text||activeIndex.label;const lines=pageLinesByPage[pageKey()]||[];return lines[0]?.text||`Page ${pageNum}`}
-
-function rememberSelectedIndex(item=activeIndex){
-  if(item?.label) selectedIndexByPage[pageKey()]={label:item.label,text:(item.lines?.[0]?.text||item.label),y:item.y||0};
-  updateSelectedIndexStatus();
+function currentContext(){
+  const selectedIndex=activeIndex?.label || selectedIndexByPage[pageKey()] || null;
+  return {page:pageNum,zoom:zoomFactor,sx:viewer.scrollLeft||0,sy:viewer.scrollTop||0,index:selectedIndex,chapter:(typeof bookmarkLabelForCurrent==='function'?bookmarkLabelForCurrent():`Page ${pageNum}`)}
 }
-function selectedIndexInfo(){
-  if(activeIndex?.label) return {label:activeIndex.label,text:(activeIndex.lines?.[0]?.text||activeIndex.label),y:activeIndex.y||0};
-  return selectedIndexByPage[pageKey()]||null;
+function selectedIndexItem(){
+  const label=activeIndex?.label || selectedIndexByPage[pageKey()] || null;
+  if(!label) return null;
+  return (indexItemsByPage[pageKey()]||[]).find(i=>i.label===label) || activeIndex || null;
 }
-function updateSelectedIndexStatus(){
-  if(typeof selectedIndexStatus==='undefined') return;
-  const s=selectedIndexInfo();
-  selectedIndexStatus.classList.toggle('hasIndex',!!s);
-  selectedIndexStatus.textContent=s ? `Selected index: ${s.label} — ${(s.text||'').slice(0,80)}` : 'No index selected. Open Index and center/tap an index first.';
+function currentIndexText(){
+  const item=selectedIndexItem();
+  if(item?.lines?.length) return item.lines[0].text || item.label;
+  const lines=pageLinesByPage[pageKey()]||[];
+  return lines[0]?.text || `Page ${pageNum}`;
 }
-function ensureSelectedIndexOrGuide(){
-  const s=selectedIndexInfo();
-  if(s) return s;
-  toast('Open Index and select an index first');
-  setWorkspaceMode(false);
-  setIndexMode(true);
-  return null;
-}
-
-function setWorkspaceMode(on){closePanels(on?'workspace':'');document.body.classList.toggle('workspaceOpen',on);if(on){updateSelectedIndexStatus();renderWorkspace();renderObjectMarkers();}}
+function setWorkspaceMode(on){closePanels(on?'workspace':'');document.body.classList.toggle('workspaceOpen',on);if(on){renderWorkspace();renderObjectMarkers();}}
 function setWorkspaceTab(tab){workspaceTab=tab;[tabCollections,tabNotes,tabLinks].forEach(b=>b.classList.remove('active'));({collections:tabCollections,notes:tabNotes,links:tabLinks}[tab])?.classList.add('active');renderWorkspace();}
 async function jumpToContext(ctx){if(!ctx||!doc)return;pageNum=Math.max(1,Math.min(doc.numPages,ctx.page||pageNum));zoomFactor=Math.max(.75,Math.min(3,ctx.zoom||1));updateZoomLabel();document.body.classList.remove('workspaceOpen','noteEditing','collectionPicking');await renderPage(pageNum);requestAnimationFrame(()=>{viewer.scrollLeft=ctx.sx||0;viewer.scrollTop=ctx.sy||0;});}
 function createCollection(){const name=prompt('Collection name?','New Collection');if(!name)return;workspaceData.collections.unshift({id:uid('col'),name,items:[],created:new Date().toISOString()});saveWorkspace();renderWorkspace();toast('Collection created');}
 function addCurrentPartToCollection(){
-  if(!doc) return;
-  const s=ensureSelectedIndexOrGuide();
-  if(!s) return;
+  if(!doc)return;
+  const item=selectedIndexItem();
+  if(!item){
+    setIndexMode(true);
+    toast('Pick an index first');
+    return;
+  }
   pendingCollectionItem={
     id:uid('part'),
     type:'part',
-    title:`${s.label} ${currentIndexText()}`.slice(0,90),
-    index:s.label,
+    title:`${item.label} ${currentIndexText()}`.slice(0,90),
+    index:item.label,
     context:currentContext(),
     created:new Date().toISOString()
   };
@@ -1557,20 +1543,19 @@ function addCurrentPartToCollection(){
 }
 function renderCollectionPicker(){collectionPickerList.innerHTML='';if(!workspaceData.collections.length){collectionPickerList.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;">Create a collection first.</div>';return;}workspaceData.collections.forEach(col=>{const b=document.createElement('button');b.className='collectionPickRow';b.textContent=`${col.name} (${col.items?.length||0})`;b.onclick=()=>{if(!pendingCollectionItem)return;col.items ||= [];col.items.unshift({...pendingCollectionItem,id:uid('part')});b.classList.add('active');saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Added to collection');};collectionPickerList.appendChild(b);});}
 function openNoteEditor(id=null){editingNoteId=id;const note=id?workspaceData.notes.find(n=>n.id===id):null;noteEditorTitle.textContent=id?'Edit Note':'New Note';noteTextInput.value=note?.text||'';document.body.classList.add('noteEditing');setTimeout(()=>noteTextInput.focus(),50);}
-function saveNote(){const text=noteTextInput.value.trim();if(!text){toast('Note is empty');return;}if(editingNoteId){const n=workspaceData.notes.find(x=>x.id===editingNoteId);if(n){n.text=text;n.updated=new Date().toISOString();}}else{workspaceData.notes.unshift({id:uid('note'),text,context:currentContext(),attachedTo:selectedIndexInfo()?.label?'index':'page',created:new Date().toISOString()});}saveWorkspace();document.body.classList.remove('noteEditing');renderWorkspace();renderObjectMarkers();toast('Note saved');}
-function addLink(){const dest=prompt('Link destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Link label?','Link')||'Link';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Link created');}
+function saveNote(){const text=noteTextInput.value.trim();if(!text){toast('Note is empty');return;}if(editingNoteId){const n=workspaceData.notes.find(x=>x.id===editingNoteId);if(n){n.text=text;n.updated=new Date().toISOString();}}else{workspaceData.notes.unshift({id:uid('note'),text,context:currentContext(),attachedTo:(activeIndex?.label||selectedIndexByPage[pageKey()])?'index':'page',created:new Date().toISOString()});}saveWorkspace();document.body.classList.remove('noteEditing');renderWorkspace();renderObjectMarkers();toast('Note saved');}
+function addLink(){const dest=prompt('Link destination page number?',String(pageNum));if(!dest)return;const p=Math.max(1,Math.min(doc.numPages,Number(dest)||pageNum));const label=prompt('Link label?','Shortcut')||'Shortcut';workspaceData.links.unshift({id:uid('link'),title:label,from:currentContext(),to:{page:p,zoom:1,sx:0,sy:0},created:new Date().toISOString()});saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Link created');}
 function deleteWorkspaceObject(type,id,e){if(e){e.stopPropagation();e.preventDefault();}if(type==='collection')workspaceData.collections=workspaceData.collections.filter(x=>x.id!==id);if(type==='note')workspaceData.notes=workspaceData.notes.filter(x=>x.id!==id);if(type==='link')workspaceData.links=workspaceData.links.filter(x=>x.id!==id);saveWorkspace();renderWorkspace();renderObjectMarkers();toast('Deleted');}
+
+function updateSelectedIndexStatus(){
+  if(typeof selectedIndexStatus==='undefined') return;
+  const label=activeIndex?.label || selectedIndexByPage[pageKey()] || null;
+  selectedIndexStatus.textContent=label ? `Selected index: ${label}` : 'Selected index: none — open Index and choose one';
+}
+
 function renderWorkspace(){if(typeof workspaceBody==='undefined')return;updateSelectedIndexStatus();workspaceBody.innerHTML='';if(workspaceTab==='collections'){if(!workspaceData.collections.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No collections yet.</div>';return;}workspaceData.collections.forEach(col=>{const row=document.createElement('button');row.className='workspaceRow collectionItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">${col.items?.length||0} items</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=col.name;row.onclick=()=>renderCollectionItems(col);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('collection',col.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='notes'){if(!workspaceData.notes.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No notes yet.</div>';return;}workspaceData.notes.forEach(n=>{const row=document.createElement('button');row.className='workspaceRow noteItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${n.context?.page||'?'} ${n.context?.index?('• '+n.context.index):''}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=n.text;row.onclick=()=>jumpToContext(n.context);row.ondblclick=()=>openNoteEditor(n.id);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('note',n.id,e);workspaceBody.appendChild(row);});}if(workspaceTab==='links'){if(!workspaceData.links.length){workspaceBody.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px;font-weight:700;text-align:center;">No links yet.</div>';return;}workspaceData.links.forEach(l=>{const row=document.createElement('button');row.className='workspaceRow linkItem';row.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">From page ${l.from?.page||'?'} → page ${l.to?.page||'?'}</div></div><button class="workspaceDelete">×</button>`;row.querySelector('.workspaceRowTitle').textContent=l.title||'Link';row.onclick=()=>jumpToContext(l.to);row.querySelector('.workspaceDelete').onclick=(e)=>deleteWorkspaceObject('link',l.id,e);workspaceBody.appendChild(row);});}}
 function renderCollectionItems(col){workspaceBody.innerHTML='';const back=document.createElement('button');back.className='workspaceRow';back.innerHTML='<div><div class="workspaceRowTitle">‹ Back to collections</div></div><span></span>';back.onclick=()=>renderWorkspace();workspaceBody.appendChild(back);(col.items||[]).forEach(item=>{const ir=document.createElement('button');ir.className='workspaceRow collectionItem';ir.innerHTML=`<div><div class="workspaceRowTitle"></div><div class="workspaceRowMeta">Page ${item.context?.page||'?'} ${item.index?('• '+item.index):''}</div></div><button class="workspaceDelete">×</button>`;ir.querySelector('.workspaceRowTitle').textContent=item.title||'Part reference';ir.onclick=()=>jumpToContext(item.context);ir.querySelector('.workspaceDelete').onclick=(e)=>{e.stopPropagation();col.items=col.items.filter(x=>x.id!==item.id);saveWorkspace();renderWorkspace();renderObjectMarkers();};workspaceBody.appendChild(ir);});}
-function markerY(ctx){
-  if(!ctx) return 12;
-  if(ctx.index){
-    const item=(indexItemsByPage[String(ctx.page)]||[]).find(i=>i.label===ctx.index);
-    if(item) return Math.max(10,item.y*drawCanvas.clientHeight);
-    if(ctx.indexY!=null) return Math.max(10,ctx.indexY*drawCanvas.clientHeight);
-  }
-  return 16+((ctx.page||1)%10)*28;
-}return 16+((ctx.page||1)%10)*28;}
+function markerY(ctx){if(!ctx)return 12;if(ctx.index){const item=(indexItemsByPage[String(ctx.page)]||[]).find(i=>i.label===ctx.index);if(item)return Math.max(10,item.y*drawCanvas.clientHeight);}return 16+((ctx.page||1)%10)*28;}
 function renderObjectMarkers(){
   if(typeof objectMarkers==='undefined'||!stage||stage.hidden)return;
   objectMarkers.innerHTML='';
@@ -1578,24 +1563,31 @@ function renderObjectMarkers(){
   objectMarkers.style.height=stage.clientHeight+'px';
   const page=pageNum;
   const markers=[];
-  workspaceData.notes.forEach(n=>{if(n.context?.page===page)markers.push({type:'note',ctx:n.context,label:'N',open:()=>openNoteEditor(n.id),title:n.text});});
-  workspaceData.links.forEach(l=>{if(l.from?.page===page)markers.push({type:'link',ctx:l.from,label:'↗',open:()=>jumpToContext(l.to),title:l.title});});
-  workspaceData.collections.forEach(c=>(c.items||[]).forEach(i=>{if(i.context?.page===page)markers.push({type:'collection',ctx:i.context,label:'＋',open:()=>setWorkspaceMode(true),title:c.name});}));
+  workspaceData.notes.forEach(n=>{if(n.context?.page===page)markers.push({type:'note',ctx:n.context,label:'N',open:()=>openNoteEditor(n.id)});});
+  workspaceData.links.forEach(l=>{if(l.from?.page===page)markers.push({type:'link',ctx:l.from,label:'↗',open:()=>jumpToContext(l.to)});});
+  workspaceData.collections.forEach(c=>(c.items||[]).forEach(i=>{if(i.context?.page===page)markers.push({type:'collection',ctx:i.context,label:'＋',open:()=>setWorkspaceMode(true)});}));
 
-  markers.sort((a,b)=>markerY(a.ctx)-markerY(b.ctx));
+  const groups=[];
+  markers.forEach(m=>{
+    const y=markerY(m.ctx);
+    let g=groups.find(x=>Math.abs(x.y-y)<30);
+    if(!g){g={y,items:[]};groups.push(g);}
+    g.items.push(m);
+  });
 
-  const placed=[];
-  markers.forEach((m)=>{
-    let y=markerY(m.ctx);
-    while(placed.some(p=>Math.abs(p-y)<32)) y+=32;
-    placed.push(y);
-
+  groups.forEach((g,idx)=>{
     const b=document.createElement('button');
-    b.className='objectBadge '+(m.type==='note'?'noteBadge':m.type==='link'?'linkBadge':'collectionBadge');
-    b.textContent=m.label;
-    b.title=m.title||'Object';
-    b.style.top=Math.min(Math.max(8,y),Math.max(8,stage.clientHeight-34))+'px';
-    b.onclick=(e)=>{e.stopPropagation();m.open();};
+    if(g.items.length>1){
+      b.className='objectBadge clusterBadge';
+      b.textContent=String(g.items.length);
+      b.onclick=(e)=>{e.stopPropagation();setWorkspaceMode(true);};
+    }else{
+      const m=g.items[0];
+      b.className='objectBadge '+(m.type==='note'?'noteBadge':m.type==='link'?'linkBadge':'collectionBadge');
+      b.textContent=m.label;
+      b.onclick=(e)=>{e.stopPropagation();m.open();};
+    }
+    b.style.top=(g.y+idx*2)+'px';
     objectMarkers.appendChild(b);
   });
 }
